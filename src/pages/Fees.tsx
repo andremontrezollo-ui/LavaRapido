@@ -6,18 +6,29 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { ArrowRight, Calculator, Info, Percent, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
+import { SERVICE_CONFIG } from "@/lib/constants";
+
+const MAX_BTC_AMOUNT = 21; // Max reasonable amount for calculator
 
 export default function Fees() {
   const [inputAmount, setInputAmount] = useState("0.1");
-  const [delay, setDelay] = useState([2]);
+  const [delay, setDelay] = useState<number[]>([SERVICE_CONFIG.defaultDelay]);
   
-  const amount = parseFloat(inputAmount) || 0;
-  const serviceFee = 0.015; // 1.5%
-  const networkFeeEstimate = 0.00015; // Estimated network fee in BTC
+  const rawAmount = parseFloat(inputAmount) || 0;
+  const amount = Math.max(0, Math.min(rawAmount, MAX_BTC_AMOUNT));
   
-  const serviceFeeAmount = amount * serviceFee;
-  const totalFees = serviceFeeAmount + networkFeeEstimate;
+  const serviceFeeAmount = amount * SERVICE_CONFIG.serviceFeePercentage;
+  const totalFees = serviceFeeAmount + SERVICE_CONFIG.networkFeeEstimate;
   const outputAmount = Math.max(0, amount - totalFees);
+
+  const handleAmountChange = (value: string) => {
+    // Block non-numeric except dots
+    const cleaned = value.replace(/[^0-9.]/g, "");
+    // Prevent multiple dots
+    const parts = cleaned.split(".");
+    const sanitized = parts.length > 2 ? parts[0] + "." + parts.slice(1).join("") : cleaned;
+    setInputAmount(sanitized);
+  };
 
   return (
     <Layout>
@@ -83,13 +94,19 @@ export default function Fees() {
                       Amount to send (BTC)
                     </Label>
                     <Input
-                      type="number"
+                      type="text"
+                      inputMode="decimal"
                       value={inputAmount}
-                      onChange={(e) => setInputAmount(e.target.value)}
-                      step="0.001"
-                      min="0.001"
+                      onChange={(e) => handleAmountChange(e.target.value)}
+                      placeholder="0.001"
                       className="text-lg font-mono"
                     />
+                    {rawAmount > MAX_BTC_AMOUNT && (
+                      <p className="text-xs text-warning mt-1">Max: {MAX_BTC_AMOUNT} BTC</p>
+                    )}
+                    {rawAmount < 0 && (
+                      <p className="text-xs text-destructive mt-1">Amount cannot be negative</p>
+                    )}
                   </div>
 
                   <div>
@@ -99,8 +116,8 @@ export default function Fees() {
                     <Slider
                       value={delay}
                       onValueChange={setDelay}
-                      min={0}
-                      max={24}
+                      min={SERVICE_CONFIG.minDelay}
+                      max={SERVICE_CONFIG.maxDelay}
                       step={1}
                     />
                     <p className="text-xs text-muted-foreground mt-2">
@@ -117,7 +134,7 @@ export default function Fees() {
                   </div>
                   
                   <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Service fee (1.5%)</span>
+                    <span className="text-muted-foreground">Service fee ({(SERVICE_CONFIG.serviceFeePercentage * 100).toFixed(1)}%)</span>
                     <span className="font-mono text-destructive">
                       -{serviceFeeAmount.toFixed(8)} BTC
                     </span>
@@ -126,7 +143,7 @@ export default function Fees() {
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">Network fee (est.)</span>
                     <span className="font-mono text-destructive">
-                      -{networkFeeEstimate.toFixed(8)} BTC
+                      -{SERVICE_CONFIG.networkFeeEstimate.toFixed(8)} BTC
                     </span>
                   </div>
 

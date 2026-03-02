@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { contactFormSchema, generateTicketId, type ContactFormData } from "@/lib/validation";
 import { VALIDATION_LIMITS } from "@/lib/constants";
-import { useClipboard } from "@/hooks/useClipboard";
+
 
 interface FormErrors {
   subject?: string;
@@ -31,7 +31,7 @@ export default function Contact() {
     message: "",
     replyContact: "",
   });
-  const { copied, copy } = useClipboard();
+  
 
   const handleChange = (field: keyof ContactFormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -71,11 +71,9 @@ export default function Contact() {
     setErrors({});
   };
 
-  const pgpKey = `-----BEGIN PGP PUBLIC KEY BLOCK-----
-
-mQINBGXxxx... (example key)
-...
------END PGP PUBLIC KEY BLOCK-----`;
+  // NOTE: This is a DEMO-ONLY key for educational purposes.
+  // In production, replace with a real organizational PGP public key.
+  const pgpKeyNotice = "🔑 PGP key not yet configured.\n\nThis is a demonstration environment.\nIn production, a valid PGP public key will be\npublished here for encrypted communications.";
 
   return (
     <Layout>
@@ -269,24 +267,9 @@ mQINBGXxxx... (example key)
                   </h3>
                   <div className="p-4 rounded-lg bg-secondary font-mono text-xs text-muted-foreground overflow-x-auto">
                     <pre className="whitespace-pre-wrap break-all">
-                      {pgpKey}
+                      {pgpKeyNotice}
                     </pre>
                   </div>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="mt-4"
-                    onClick={() => copy(pgpKey)}
-                  >
-                    {copied ? (
-                      <>
-                        <CheckCircle2 className="h-4 w-4 mr-2 text-success" />
-                        Copied!
-                      </>
-                    ) : (
-                      "Copy Full Key"
-                    )}
-                  </Button>
                 </div>
 
                 {/* Warning */}

@@ -8,6 +8,12 @@
     <meta name="author" content="ShadowMix" />
     <meta name="robots" content="noindex, nofollow" />
 
+    <!-- Security Headers (meta-tag level) -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="X-Frame-Options" content="DENY" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co;" />
+    <meta name="referrer" content="no-referrer" />
+
     <meta property="og:title" content="ShadowMix - Bitcoin Privacy" />
     <meta property="og:description" content="Bitcoin mixing service for financial privacy." />
     <meta property="og:type" content="website" />

@@ -9,6 +9,7 @@ import { ConfirmationSummary } from "@/components/mixing/ConfirmationSummary";
 import { DepositInfo } from "@/components/mixing/DepositInfo";
 import { SERVICE_CONFIG } from "@/lib/constants";
 import { isValidBitcoinAddress } from "@/lib/validation";
+import { createMockSession, type MixSession } from "@/lib/mock-session";
 
 export default function MixingPage() {
   const [step, setStep] = useState<MixingStep>("configure");
@@ -16,9 +17,7 @@ export default function MixingPage() {
     { id: "1", address: "", percentage: 100 },
   ]);
   const [delay, setDelay] = useState<number[]>([SERVICE_CONFIG.defaultDelay]);
-
-  // Example deposit address - in production, this would be generated server-side
-  const depositAddress = "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh";
+  const [session, setSession] = useState<MixSession | null>(null);
 
   const addDestination = useCallback(() => {
     if (destinations.length >= SERVICE_CONFIG.maxDestinations) return;
@@ -74,10 +73,17 @@ export default function MixingPage() {
 
   const canProceed = allAddressesValid && totalPercentage === 100;
 
+  const handleConfirm = useCallback(() => {
+    const newSession = createMockSession();
+    setSession(newSession);
+    setStep("deposit");
+  }, []);
+
   const handleNewOperation = useCallback(() => {
     setStep("configure");
     setDestinations([{ id: "1", address: "", percentage: 100 }]);
     setDelay([SERVICE_CONFIG.defaultDelay]);
+    setSession(null);
   }, []);
 
   return (
@@ -178,14 +184,14 @@ export default function MixingPage() {
                 destinations={destinations}
                 delay={delay[0]}
                 onBack={() => setStep("configure")}
-                onConfirm={() => setStep("deposit")}
+                onConfirm={handleConfirm}
               />
             )}
 
             {/* Step: Deposit */}
-            {step === "deposit" && (
+            {step === "deposit" && session && (
               <DepositInfo
-                depositAddress={depositAddress}
+                session={session}
                 onNewOperation={handleNewOperation}
               />
             )}

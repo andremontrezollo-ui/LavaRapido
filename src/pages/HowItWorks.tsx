@@ -3,6 +3,13 @@ import { ArrowDown, Wallet, Shuffle, Clock, CheckCircle2, ArrowRight } from "luc
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 
+// Static class map to avoid dynamic Tailwind class generation issues
+const stepColorMap: Record<string, { bg: string; text: string }> = {
+  primary: { bg: "bg-primary/10 border-2 border-primary/30", text: "text-primary" },
+  accent: { bg: "bg-accent/10 border-2 border-accent/30", text: "text-accent" },
+  success: { bg: "bg-success/10 border-2 border-success/30", text: "text-success" },
+};
+
 const flowSteps = [
   {
     icon: Wallet,
@@ -79,11 +86,11 @@ export default function HowItWorks() {
             {flowSteps.map((step, index) => (
               <div key={step.step} className="relative">
                 {/* Step Card */}
-                <div className="flex gap-6 md:gap-10 animate-fade-up" style={{ animationDelay: `${index * 150}ms` }}>
+               <div className="flex gap-6 md:gap-10 animate-fade-up" style={{ animationDelay: `${index * 150}ms` }}>
                   {/* Step Number */}
                   <div className="flex flex-col items-center">
-                    <div className={`w-16 h-16 rounded-2xl bg-${step.color}/10 border-2 border-${step.color}/30 flex items-center justify-center relative z-10`}>
-                      <step.icon className={`h-8 w-8 text-${step.color}`} />
+                    <div className={`w-16 h-16 rounded-2xl flex items-center justify-center relative z-10 ${stepColorMap[step.color]?.bg ?? "bg-primary/10 border-2 border-primary/30"}`}>
+                      <step.icon className={`h-8 w-8 ${stepColorMap[step.color]?.text ?? "text-primary"}`} />
                     </div>
                     {index < flowSteps.length - 1 && (
                       <div className="w-0.5 h-full bg-gradient-to-b from-primary/50 to-transparent min-h-[120px]" />
