@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, Plus } from "lucide-react";
+import { AlertTriangle, Plus, Loader2 } from "lucide-react";
 import { ProgressSteps, type MixingStep } from "@/components/mixing/ProgressSteps";
 import { DestinationList, type DestinationAddress } from "@/components/mixing/DestinationList";
 import { DelayConfiguration } from "@/components/mixing/DelayConfiguration";
@@ -9,7 +9,8 @@ import { ConfirmationSummary } from "@/components/mixing/ConfirmationSummary";
 import { DepositInfo } from "@/components/mixing/DepositInfo";
 import { SERVICE_CONFIG } from "@/lib/constants";
 import { isValidBitcoinAddress } from "@/lib/validation";
-import { createMockSession, type MixSession } from "@/lib/mock-session";
+import { createMixSession, type MixSessionResponse } from "@/lib/api";
+import type { MixSession } from "@/lib/mock-session";
 
 export default function MixingPage() {
   const [step, setStep] = useState<MixingStep>("configure");
@@ -18,6 +19,8 @@ export default function MixingPage() {
   ]);
   const [delay, setDelay] = useState<number[]>([SERVICE_CONFIG.defaultDelay]);
   const [session, setSession] = useState<MixSession | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const addDestination = useCallback(() => {
     if (destinations.length >= SERVICE_CONFIG.maxDestinations) return;
@@ -73,10 +76,31 @@ export default function MixingPage() {
 
   const canProceed = allAddressesValid && totalPercentage === 100;
 
-  const handleConfirm = useCallback(() => {
-    const newSession = createMockSession();
-    setSession(newSession);
-    setStep("deposit");
+  const handleConfirm = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    const result = await createMixSession();
+
+    if (result.error) {
+      setError(result.status === 429 
+        ? "Too many requests. Please wait a few minutes." 
+        : result.error);
+      setLoading(false);
+      return;
+    }
+
+    if (result.data) {
+      setSession({
+        sessionId: result.data.sessionId,
+        depositAddress: result.data.depositAddress,
+        createdAt: new Date(result.data.createdAt),
+        expiresAt: new Date(result.data.expiresAt),
+        status: "pending_deposit",
+      });
+      setStep("deposit");
+    }
+    setLoading(false);
   }, []);
 
   const handleNewOperation = useCallback(() => {
@@ -84,6 +108,7 @@ export default function MixingPage() {
     setDestinations([{ id: "1", address: "", percentage: 100 }]);
     setDelay([SERVICE_CONFIG.defaultDelay]);
     setSession(null);
+    setError(null);
   }, []);
 
   return (
@@ -180,12 +205,27 @@ export default function MixingPage() {
 
             {/* Step: Confirm */}
             {step === "confirm" && (
-              <ConfirmationSummary
-                destinations={destinations}
-                delay={delay[0]}
-                onBack={() => setStep("configure")}
-                onConfirm={handleConfirm}
-              />
+              <div className="space-y-4">
+                {error && (
+                  <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 flex items-start gap-3">
+                    <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-destructive mb-1">Error</p>
+                      <p className="text-sm text-muted-foreground">{error}</p>
+                      <Button variant="outline" size="sm" className="mt-2" onClick={() => setError(null)}>
+                        Dismiss
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                <ConfirmationSummary
+                  destinations={destinations}
+                  delay={delay[0]}
+                  onBack={() => { setStep("configure"); setError(null); }}
+                  onConfirm={handleConfirm}
+                  loading={loading}
+                />
+              </div>
             )}
 
             {/* Step: Deposit */}

@@ -10,11 +10,12 @@ import {
   Clock, 
   CheckCircle2, 
   Key,
-  AlertCircle
+  AlertCircle,
+  Loader2
 } from "lucide-react";
-import { contactFormSchema, generateTicketId, type ContactFormData } from "@/lib/validation";
+import { contactFormSchema, type ContactFormData } from "@/lib/validation";
 import { VALIDATION_LIMITS } from "@/lib/constants";
-
+import { createContactTicket } from "@/lib/api";
 
 interface FormErrors {
   subject?: string;
@@ -26,25 +27,25 @@ export default function Contact() {
   const [submitted, setSubmitted] = useState(false);
   const [ticketId, setTicketId] = useState("");
   const [errors, setErrors] = useState<FormErrors>({});
+  const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
   const [formData, setFormData] = useState<ContactFormData>({
     subject: "",
     message: "",
     replyContact: "",
   });
-  
 
   const handleChange = (field: keyof ContactFormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-    // Clear error when user starts typing
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
     }
+    if (apiError) setApiError(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate form data
     const result = contactFormSchema.safeParse(formData);
     
     if (!result.success) {
@@ -57,11 +58,31 @@ export default function Contact() {
       return;
     }
 
-    // Generate secure ticket ID
-    const id = generateTicketId();
-    setTicketId(id);
-    setSubmitted(true);
-    setErrors({});
+    setLoading(true);
+    setApiError(null);
+
+    const apiResult = await createContactTicket({
+      subject: formData.subject,
+      message: formData.message,
+      replyContact: formData.replyContact || undefined,
+    });
+
+    setLoading(false);
+
+    if (apiResult.error) {
+      setApiError(
+        apiResult.status === 429
+          ? "Too many requests. Please wait a few minutes before trying again."
+          : apiResult.error
+      );
+      return;
+    }
+
+    if (apiResult.data) {
+      setTicketId(apiResult.data.ticketId);
+      setSubmitted(true);
+      setErrors({});
+    }
   };
 
   const handleNewMessage = () => {
@@ -69,10 +90,9 @@ export default function Contact() {
     setTicketId("");
     setFormData({ subject: "", message: "", replyContact: "" });
     setErrors({});
+    setApiError(null);
   };
 
-  // NOTE: This is a DEMO-ONLY key for educational purposes.
-  // In production, replace with a real organizational PGP public key.
   const pgpKeyNotice = "🔑 PGP key not yet configured.\n\nThis is a demonstration environment.\nIn production, a valid PGP public key will be\npublished here for encrypted communications.";
 
   return (
@@ -105,6 +125,13 @@ export default function Contact() {
                       Send Message
                     </h2>
 
+                    {apiError && (
+                      <div className="mb-6 p-3 rounded-lg bg-destructive/10 border border-destructive/20 flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4 text-destructive shrink-0" />
+                        <span className="text-sm text-destructive">{apiError}</span>
+                      </div>
+                    )}
+
                     <form onSubmit={handleSubmit} className="space-y-6" noValidate>
                       <div>
                         <Label htmlFor="subject" className="text-muted-foreground">
@@ -118,6 +145,7 @@ export default function Contact() {
                           onChange={(e) => handleChange("subject", e.target.value)}
                           maxLength={VALIDATION_LIMITS.subject.maxLength}
                           autoComplete="off"
+                          disabled={loading}
                         />
                         {errors.subject && (
                           <p className="text-xs text-destructive mt-1">{errors.subject}</p>
@@ -135,6 +163,7 @@ export default function Contact() {
                           value={formData.message}
                           onChange={(e) => handleChange("message", e.target.value)}
                           maxLength={VALIDATION_LIMITS.message.maxLength}
+                          disabled={loading}
                         />
                         <div className="flex justify-between mt-1">
                           {errors.message ? (
@@ -160,6 +189,7 @@ export default function Contact() {
                           onChange={(e) => handleChange("replyContact", e.target.value)}
                           maxLength={VALIDATION_LIMITS.replyContact.maxLength}
                           autoComplete="off"
+                          disabled={loading}
                         />
                         {errors.replyContact ? (
                           <p className="text-xs text-destructive mt-1">{errors.replyContact}</p>
@@ -170,9 +200,18 @@ export default function Contact() {
                         )}
                       </div>
 
-                      <Button variant="hero" type="submit" className="w-full">
-                        <Mail className="h-4 w-4 mr-2" />
-                        Send Message
+                      <Button variant="hero" type="submit" className="w-full" disabled={loading}>
+                        {loading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Sending...
+                          </>
+                        ) : (
+                          <>
+                            <Mail className="h-4 w-4 mr-2" />
+                            Send Message
+                          </>
+                        )}
                       </Button>
                     </form>
                   </>
@@ -259,7 +298,6 @@ export default function Contact() {
                   </div>
                 </div>
 
-                {/* PGP Key */}
                 <div className="glass-card p-6">
                   <h3 className="font-heading font-semibold mb-4 flex items-center gap-2">
                     <Key className="h-4 w-4 text-primary" />
@@ -272,7 +310,6 @@ export default function Contact() {
                   </div>
                 </div>
 
-                {/* Warning */}
                 <div className="p-4 rounded-xl bg-warning/5 border border-warning/20 flex items-start gap-3">
                   <AlertCircle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
                   <div>

@@ -1,1 +1,7 @@
 project_id = "cnzsyzibprecpaxmfyzb"
+
+[functions.mix-sessions]
+verify_jwt = false
+
+[functions.contact]
+verify_jwt = false

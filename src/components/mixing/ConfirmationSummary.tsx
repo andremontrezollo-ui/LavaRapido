@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Clock } from "lucide-react";
+import { Clock, Loader2 } from "lucide-react";
 import type { DestinationAddress } from "./DestinationList";
 
 interface ConfirmationSummaryProps {
@@ -7,6 +7,7 @@ interface ConfirmationSummaryProps {
   delay: number;
   onBack: () => void;
   onConfirm: () => void;
+  loading?: boolean;
 }
 
 export function ConfirmationSummary({
@@ -14,6 +15,7 @@ export function ConfirmationSummary({
   delay,
   onBack,
   onConfirm,
+  loading = false,
 }: ConfirmationSummaryProps) {
   return (
     <div className="space-y-8 animate-fade-up">
@@ -60,6 +62,7 @@ export function ConfirmationSummary({
           size="lg"
           className="flex-1"
           onClick={onBack}
+          disabled={loading}
         >
           Back
         </Button>
@@ -68,8 +71,16 @@ export function ConfirmationSummary({
           size="lg"
           className="flex-1"
           onClick={onConfirm}
+          disabled={loading}
         >
-          Confirm and Generate Address
+          {loading ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Creating session...
+            </>
+          ) : (
+            "Confirm and Generate Address"
+          )}
         </Button>
       </div>
     </div>
