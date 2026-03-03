@@ -14,7 +14,84 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      contact_tickets: {
+        Row: {
+          created_at: string
+          id: string
+          ip_hash: string | null
+          message: string
+          reply_contact: string | null
+          subject: string
+          ticket_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ip_hash?: string | null
+          message: string
+          reply_contact?: string | null
+          subject: string
+          ticket_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ip_hash?: string | null
+          message?: string
+          reply_contact?: string | null
+          subject?: string
+          ticket_id?: string
+        }
+        Relationships: []
+      }
+      mix_sessions: {
+        Row: {
+          client_fingerprint_hash: string | null
+          created_at: string
+          deposit_address: string
+          expires_at: string
+          id: string
+          status: string
+        }
+        Insert: {
+          client_fingerprint_hash?: string | null
+          created_at?: string
+          deposit_address: string
+          expires_at: string
+          id?: string
+          status?: string
+        }
+        Update: {
+          client_fingerprint_hash?: string | null
+          created_at?: string
+          deposit_address?: string
+          expires_at?: string
+          id?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      rate_limits: {
+        Row: {
+          created_at: string
+          endpoint: string
+          id: string
+          ip_hash: string
+        }
+        Insert: {
+          created_at?: string
+          endpoint: string
+          id?: string
+          ip_hash: string
+        }
+        Update: {
+          created_at?: string
+          endpoint?: string
+          id?: string
+          ip_hash?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
