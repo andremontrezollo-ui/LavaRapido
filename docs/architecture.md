@@ -84,7 +84,8 @@ Complex business rules are encapsulated in policy objects:
 
 | Policy | Location | Purpose |
 |--------|----------|---------|
-| `SessionTTLPolicy` | address-generator/domain/policies | TTL validation and expiration |
+| `AddressExpirationPolicy` | address-generator/domain/policies | TTL per namespace purpose |
+| `AddressGenerationPolicy` | address-generator/domain/policies | Max active addresses per network |
 | `PoolHealthPolicy` | liquidity-pool/domain/policies | Health evaluation and thresholds |
 | `LogRetentionPolicy` | log-minimizer/domain/policies | Data classification and retention |
 | `RateLimitPolicy` | payment-scheduler/domain/policies | Rate limit evaluation |
