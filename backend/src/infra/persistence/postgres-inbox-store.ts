@@ -45,6 +45,7 @@ export class PostgresInboxStore implements InboxStore {
       handlerName: row.handler_name,
       aggregateId: row.aggregate_id,
       processedAt: row.processed_at,
+      // checksum is not stored in the database; return empty string for compatibility
       checksum: '',
     }));
   }

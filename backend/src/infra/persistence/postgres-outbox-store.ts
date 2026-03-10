@@ -5,8 +5,15 @@ export class PostgresOutboxStore implements OutboxStore {
   constructor(private readonly pool: Pool) {}
 
   async save(message: OutboxMessage): Promise<void> {
+    // message.payload is a JSON string per the OutboxMessage interface; parse it to store as JSONB
+    let parsedData: unknown;
+    try {
+      parsedData = JSON.parse(message.payload);
+    } catch {
+      parsedData = message.payload;
+    }
     const payload = {
-      data: JSON.parse(message.payload),
+      data: parsedData,
       correlationId: message.correlationId,
     };
     await this.pool.query(
