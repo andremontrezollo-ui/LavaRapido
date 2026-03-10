@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { AllocateLiquidityUseCase } from '../application/use-cases/allocate-liquidity.usecase';
 import { InMemoryLiquidityPoolRepository } from '../infra/repositories/liquidity-pool.repository';
+import { InMemoryIdempotencyStore } from '../../../test-utils';
 import { LiquidityPool } from '../domain/entities/liquidity-pool.entity';
 import { Amount } from '../domain/value-objects/amount.vo';
 
@@ -15,7 +16,7 @@ describe('AllocateLiquidityUseCase', () => {
     const publisher = { publish: async (e: any) => { events.push(e); } };
     const clock = { now: () => new Date() };
 
-    const uc = new AllocateLiquidityUseCase(repo, publisher, clock);
+    const uc = new AllocateLiquidityUseCase(repo, publisher, clock, new InMemoryIdempotencyStore());
     await uc.execute({ allocationId: 'alloc-1', poolId: 'pool-1', amount: 1.5, destination: 'dest' });
 
     expect(events.length).toBe(1);
@@ -31,7 +32,7 @@ describe('AllocateLiquidityUseCase', () => {
     const publisher = { publish: async () => {} };
     const clock = { now: () => new Date() };
 
-    const uc = new AllocateLiquidityUseCase(repo, publisher, clock);
+    const uc = new AllocateLiquidityUseCase(repo, publisher, clock, new InMemoryIdempotencyStore());
     await expect(uc.execute({ allocationId: 'a', poolId: 'pool-1', amount: 1, destination: 'd' })).rejects.toThrow();
   });
 });

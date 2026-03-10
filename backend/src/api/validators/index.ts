@@ -5,14 +5,14 @@
  * These mirror client-side validation but are enforced server-side.
  */
 
-export interface ValidationResult<T> {
+export type ValidationResult<T> = {
   valid: true;
   data: T;
 } | {
   valid: false;
   error: string;
   details?: Record<string, string>;
-}
+};
 
 // Contact ticket validation
 export interface ContactPayload {

@@ -2,20 +2,66 @@
  * Liquidity Pool - Application Layer
  * 
  * Use cases: reserve liquidity, confirm liquidation, query health.
+ * Uses simplified data transfer types to avoid domain coupling.
  */
 
-import type {
-  Reserve,
-  Obligation,
-  PoolHealth,
-  PoolEvent,
-  LiquidityReservedEvent,
-  LiquidityReleasedEvent,
-  PoolHealthChangedEvent
-} from '../domain';
-import { calculatePoolHealth } from '../domain';
+// ── Local application-layer types ──────────────────────────────────────────────
 
-// Ports
+export interface Reserve {
+  totalAmount: number;
+  availableAmount: number;
+  reservedAmount: number;
+}
+
+export interface Obligation {
+  id: string;
+  amount: number;
+  createdAt: Date;
+  status: 'pending' | 'fulfilled' | 'cancelled';
+  poolId?: string;
+}
+
+export interface PoolHealth {
+  status: 'healthy' | 'warning' | 'critical';
+  utilizationRate: number;
+  pendingObligations?: number;
+}
+
+export interface PoolEvent {
+  type: string;
+  timestamp: Date;
+}
+
+export interface LiquidityReservedEvent extends PoolEvent {
+  type: 'LIQUIDITY_RESERVED';
+  obligationId: string;
+  amount: number;
+}
+
+export interface LiquidityReleasedEvent extends PoolEvent {
+  type: 'LIQUIDITY_RELEASED';
+  obligationId: string;
+  amount: number;
+  reason: string;
+}
+
+export interface PoolHealthChangedEvent extends PoolEvent {
+  type: 'POOL_HEALTH_CHANGED';
+  previousStatus: string;
+  newStatus: string;
+  utilizationRate: number;
+}
+
+function calculatePoolHealth(reserve: Reserve): PoolHealth {
+  const utilization = reserve.totalAmount > 0
+    ? (reserve.reservedAmount / reserve.totalAmount)
+    : 0;
+  const status = utilization > 0.9 ? 'critical' : utilization > 0.7 ? 'warning' : 'healthy';
+  return { status, utilizationRate: utilization };
+}
+
+// ── Ports ──────────────────────────────────────────────────────────────────────
+
 export interface PoolLedger {
   getReserve(): Promise<Reserve>;
   updateReserve(reserve: Reserve): Promise<void>;
@@ -33,7 +79,8 @@ export interface EventPublisher {
   publish(event: PoolEvent): Promise<void>;
 }
 
-// Use Cases
+// ── Use Cases ──────────────────────────────────────────────────────────────────
+
 export class ReserveLiquidityUseCase {
   constructor(
     private readonly ledger: PoolLedger,

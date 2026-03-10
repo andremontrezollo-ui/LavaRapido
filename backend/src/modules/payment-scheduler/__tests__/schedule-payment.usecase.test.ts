@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { SchedulePaymentUseCase } from '../application/use-cases/schedule-payment.usecase';
 import { InMemoryScheduledPaymentRepository } from '../infra/repositories/scheduled-payment.repository';
+import { InMemoryIdempotencyStore } from '../../../test-utils';
 
 describe('SchedulePaymentUseCase', () => {
   it('should schedule a payment', async () => {
@@ -10,7 +11,7 @@ describe('SchedulePaymentUseCase', () => {
     const clock = { now: () => new Date() };
     const idGen = { generate: () => 'pay-001' };
 
-    const uc = new SchedulePaymentUseCase(repo, publisher, clock, idGen);
+    const uc = new SchedulePaymentUseCase(repo, publisher, clock, idGen, new InMemoryIdempotencyStore());
     const result = await uc.execute({
       destination: 'bc1qtest12345678901234567890',
       amount: 0.5,

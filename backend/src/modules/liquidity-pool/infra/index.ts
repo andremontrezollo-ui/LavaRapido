@@ -2,10 +2,10 @@
  * Liquidity Pool - Infrastructure Layer
  * 
  * Ledger storage and metrics adapters.
+ * Uses application-layer types to avoid domain coupling.
  */
 
-import type { PoolLedger, IdGenerator, EventPublisher } from '../application';
-import type { Reserve, Obligation, PoolEvent } from '../domain';
+import type { PoolLedger, IdGenerator, EventPublisher, Reserve, Obligation, PoolEvent } from '../application';
 
 // In-Memory Pool Ledger
 export class InMemoryPoolLedger implements PoolLedger {
@@ -13,7 +13,6 @@ export class InMemoryPoolLedger implements PoolLedger {
     totalAmount: 100,
     availableAmount: 100,
     reservedAmount: 0,
-    currency: 'BTC',
   };
   private obligations = new Map<string, Obligation>();
 
@@ -45,21 +44,11 @@ export class InMemoryPoolLedger implements PoolLedger {
 
   // Test helpers
   setInitialReserve(amount: number): void {
-    this.reserve = {
-      totalAmount: amount,
-      availableAmount: amount,
-      reservedAmount: 0,
-      currency: 'BTC',
-    };
+    this.reserve = { totalAmount: amount, availableAmount: amount, reservedAmount: 0 };
   }
 
   clear(): void {
-    this.reserve = {
-      totalAmount: 100,
-      availableAmount: 100,
-      reservedAmount: 0,
-      currency: 'BTC',
-    };
+    this.reserve = { totalAmount: 100, availableAmount: 100, reservedAmount: 0 };
     this.obligations.clear();
   }
 }
@@ -92,44 +81,23 @@ export class InMemoryPoolEventPublisher implements EventPublisher {
 
 // Metrics Collector (for observability)
 export class PoolMetricsCollector {
-  private metrics: {
-    reservations: number;
-    fulfillments: number;
-    expirations: number;
-    healthChanges: number;
-  } = {
+  private metrics = {
     reservations: 0,
     fulfillments: 0,
     expirations: 0,
     healthChanges: 0,
   };
 
-  recordReservation(): void {
-    this.metrics.reservations++;
-  }
-
-  recordFulfillment(): void {
-    this.metrics.fulfillments++;
-  }
-
-  recordExpiration(): void {
-    this.metrics.expirations++;
-  }
-
-  recordHealthChange(): void {
-    this.metrics.healthChanges++;
-  }
+  recordReservation(): void { this.metrics.reservations++; }
+  recordFulfillment(): void { this.metrics.fulfillments++; }
+  recordExpiration(): void { this.metrics.expirations++; }
+  recordHealthChange(): void { this.metrics.healthChanges++; }
 
   getMetrics(): typeof this.metrics {
     return { ...this.metrics };
   }
 
   reset(): void {
-    this.metrics = {
-      reservations: 0,
-      fulfillments: 0,
-      expirations: 0,
-      healthChanges: 0,
-    };
+    this.metrics = { reservations: 0, fulfillments: 0, expirations: 0, healthChanges: 0 };
   }
 }

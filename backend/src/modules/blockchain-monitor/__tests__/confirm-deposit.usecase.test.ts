@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { ConfirmDepositUseCase } from '../application/use-cases/confirm-deposit.usecase';
 import { InMemoryObservedTransactionRepository } from '../infra/repositories/observed-transaction.repository';
+import { InMemoryIdempotencyStore } from '../../../test-utils';
 import { ObservedTransaction } from '../domain/entities/observed-transaction.entity';
 import { TxId } from '../domain/value-objects/txid.vo';
 import { ConfirmationCount } from '../domain/value-objects/confirmation-count.vo';
@@ -23,7 +24,7 @@ describe('ConfirmDepositUseCase', () => {
     const publisher = { publish: async (e: any) => { events.push(e); } };
     const clock = { now: () => new Date() };
 
-    const uc = new ConfirmDepositUseCase(repo, publisher, clock);
+    const uc = new ConfirmDepositUseCase(repo, publisher, clock, new InMemoryIdempotencyStore());
     const result = await uc.execute(txHash, 6);
 
     expect(result.isConfirmed).toBe(true);
@@ -37,7 +38,7 @@ describe('ConfirmDepositUseCase', () => {
     const publisher = { publish: async (e: any) => { events.push(e); } };
     const clock = { now: () => new Date() };
 
-    const uc = new ConfirmDepositUseCase(repo, publisher, clock);
+    const uc = new ConfirmDepositUseCase(repo, publisher, clock, new InMemoryIdempotencyStore());
     const result = await uc.execute(txHash, 2);
 
     expect(result.isConfirmed).toBe(false);
