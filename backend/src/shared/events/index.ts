@@ -6,4 +6,3 @@ export { createOutboxMessage } from './outbox-message';
 export type { InboxMessage, InboxStore } from './inbox-message';
 export { createInboxMessage } from './inbox-message';
 export { createIntegrationEvent } from './integration-event';
-export { ResilientEventBus } from './InMemoryEventBus';
