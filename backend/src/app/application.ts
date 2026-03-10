@@ -1,7 +1,7 @@
 import { createServer } from 'http';
 import { Application } from './types';
 import { DependencyContainer } from './dependency-container';
-import { Logger } from '../shared/logging/secure-logger';
+import { Logger } from '../shared/logging/logger';
 import { AppConfig } from '../shared/config/app-config';
 
 export class ApplicationService implements Application {

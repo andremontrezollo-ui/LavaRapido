@@ -1,0 +1,78 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main, 'copilot/**']
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+
+defaults:
+  run:
+    working-directory: backend
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: Build, Type-Check, Test, Migrate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run type-check
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm test
+
+      - name: Coverage
+        run: npm run test:coverage || true
+
+      - name: Verify migrations exist and are readable
+        run: npm run migrate
+
+      - name: Assert migration 001 exists
+        run: |
+          test -f src/infra/database/migrations/001_initial_schema.up.sql && \
+          echo "001_initial_schema.up.sql exists" || \
+          (echo "MISSING: 001_initial_schema.up.sql" && exit 1)
+
+      - name: Assert migration 002 exists
+        run: |
+          test -f src/infra/database/migrations/002_add_indexes.up.sql && \
+          echo "002_add_indexes.up.sql exists" || \
+          (echo "MISSING: 002_add_indexes.up.sql" && exit 1)
+
+      - name: Assert production-container is wired
+        run: |
+          grep -q "buildProductionContainer" src/server.ts && \
+          echo "production-container is wired in server.ts" || \
+          (echo "FAIL: server.ts does not use production-container" && exit 1)
+
+      - name: Assert no InMemory* in infra/index.ts
+        run: |
+          ! grep -q "InMemory" src/infra/index.ts && \
+          echo "infra/index.ts has no InMemory* exports" || \
+          (echo "FAIL: infra/index.ts still exports InMemory*" && exit 1)

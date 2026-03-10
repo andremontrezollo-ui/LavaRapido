@@ -12,7 +12,7 @@ export type { AuthResult } from './middlewares/auth.middleware';
 export { AuthorizationMiddleware } from './middlewares/authorization.middleware';
 export type { Scope, AuthorizationResult } from './middlewares/authorization.middleware';
 export { CorrelationIdMiddleware } from './middlewares/correlation-id.middleware';
-export { RateLimitMiddleware, InMemoryRateLimitStore } from './middlewares/rate-limit.middleware';
+export { RateLimitMiddleware } from './middlewares/rate-limit.middleware';
 export type { RateLimitResult, RateLimitStore } from './middlewares/rate-limit.middleware';
 export { RequestLoggingMiddleware } from './middlewares/request-logging.middleware';
 

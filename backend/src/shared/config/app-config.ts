@@ -15,6 +15,14 @@ export interface AppConfig {
   readonly outboxPollIntervalMs: number;
   readonly maxRetries: number;
   readonly lockTtlSeconds: number;
+  readonly app: {
+    readonly version: string;
+    readonly environment: string;
+  };
+  readonly http: {
+    readonly port: number;
+    readonly host: string;
+  };
 }
 
 export const DEFAULT_CONFIG: Partial<AppConfig> = {
@@ -27,4 +35,6 @@ export const DEFAULT_CONFIG: Partial<AppConfig> = {
   outboxPollIntervalMs: 5000,
   maxRetries: 3,
   lockTtlSeconds: 30,
+  app: { version: '0.0.0', environment: 'development' },
+  http: { port: 3000, host: '0.0.0.0' },
 };

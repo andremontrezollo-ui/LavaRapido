@@ -1,44 +1,33 @@
-import { RedisClient } from 'redis';
+/**
+ * Redis Rate Limit Store — production rate limiting using ioredis.
+ * Implements the RateLimitStore interface from rate-limit.middleware.
+ */
 
-class RedisRateLimitStore {
-    private client: RedisClient;
+import Redis from 'ioredis';
+import type { RateLimitStore } from '../../api/middlewares/rate-limit.middleware';
 
-    constructor(redisClient: RedisClient) {
-        this.client = redisClient;
+export class RedisRateLimitStore implements RateLimitStore {
+  constructor(private readonly client: Redis) {}
+
+  async increment(key: string, windowSeconds: number): Promise<{ count: number; ttl: number }> {
+    const pipeline = this.client.pipeline();
+    pipeline.incr(key);
+    pipeline.ttl(key);
+    const results = await pipeline.exec();
+
+    if (!results) {
+      return { count: 1, ttl: windowSeconds };
     }
 
-    // Increment the rate limit for a specific key
-    async increment(key: string, limit: number, period: number): Promise<number> {
-        const currentCount = await new Promise<number>((resolve, reject) => {
-            this.client.incr(key, (err, reply) => {
-                if (err) reject(err);
-                else resolve(reply);
-            });
-        });
+    const count = (results[0][1] as number) ?? 1;
+    let ttl = (results[1][1] as number) ?? -1;
 
-        // Set expiration time if it's the first request
-        if (currentCount === 1) {
-            await new Promise<void>((resolve, reject) => {
-                this.client.expire(key, period, (err) => {
-                    if (err) reject(err);
-                    else resolve();
-                });
-            });
-        }
-
-        return currentCount;
+    // Set expiry on first request
+    if (count === 1 || ttl < 0) {
+      await this.client.expire(key, windowSeconds);
+      ttl = windowSeconds;
     }
 
-    // Check if the limit has been exceeded
-    async isLimitExceeded(key: string, limit: number): Promise<boolean> {
-        const currentCount = await new Promise<number>((resolve, reject) => {
-            this.client.get(key, (err, reply) => {
-                if (err) reject(err);
-                else resolve(reply ? parseInt(reply) : 0);
-            });
-        });
-        return currentCount >= limit;
-    }
+    return { count, ttl };
+  }
 }
-
-export default RedisRateLimitStore;
