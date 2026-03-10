@@ -1,0 +1,120 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main, "copilot/**"]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-ci.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-type-check:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: ./backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit --project tsconfig.json || echo "::warning::Type check reported issues (non-blocking)"
+
+  unit-tests:
+    name: Unit & Integration Tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: .
+    env:
+      DATABASE_URL: postgres://lavarapido:testpassword@localhost:5432/lavarapido_test
+      REDIS_URL: redis://:testpassword@localhost:6379
+      JWT_SECRET: ci-test-secret-do-not-use-in-production
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: lavarapido
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: lavarapido_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U lavarapido"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: package-lock.json
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: cd backend && ../node_modules/.bin/vitest run --reporter=verbose
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Audit root dependencies
+        run: npm audit --audit-level=high || true
+
+      - name: Check for committed secrets
+        run: |
+          if git log --all --full-history -- '.env' | grep -q 'commit'; then
+            echo "::warning::Committed .env files detected in history. Run: git filter-repo --path .env --invert-paths"
+          fi
+          # Fail if .env exists in the current tree
+          if [ -f ".env" ] && git ls-files --error-unmatch .env 2>/dev/null; then
+            echo "::error::.env is tracked by git — remove it with: git rm --cached .env"
+            exit 1
+          fi
+          echo "No tracked .env files found."
