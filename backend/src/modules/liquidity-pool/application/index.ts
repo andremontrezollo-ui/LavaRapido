@@ -2,18 +2,71 @@
  * Liquidity Pool - Application Layer
  * 
  * Use cases: reserve liquidity, confirm liquidation, query health.
+ * Uses simple plain-object types rather than domain value-object classes.
  */
 
-import type {
-  Reserve,
-  Obligation,
-  PoolHealth,
-  PoolEvent,
-  LiquidityReservedEvent,
-  LiquidityReleasedEvent,
-  PoolHealthChangedEvent
-} from '../domain';
-import { calculatePoolHealth } from '../domain';
+// Local plain-object types for use-case I/O
+export interface Reserve {
+  totalAmount: number;
+  availableAmount: number;
+  reservedAmount: number;
+  currency: string;
+}
+
+export interface Obligation {
+  id: string;
+  amount: number;
+  status: 'pending' | 'fulfilled' | 'expired';
+  createdAt: Date;
+  poolId?: string;
+}
+
+export interface PoolHealth {
+  status: 'healthy' | 'warning' | 'critical';
+  utilizationRate: number;
+  availableAmount: number;
+  pendingObligations: number;
+}
+
+export type PoolEvent =
+  | LiquidityReservedEvent
+  | LiquidityReleasedEvent
+  | PoolHealthChangedEvent;
+
+export interface LiquidityReservedEvent {
+  type: 'LIQUIDITY_RESERVED';
+  obligationId: string;
+  amount: number;
+  timestamp: Date;
+}
+
+export interface LiquidityReleasedEvent {
+  type: 'LIQUIDITY_RELEASED';
+  obligationId: string;
+  amount: number;
+  reason: string;
+  timestamp: Date;
+}
+
+export interface PoolHealthChangedEvent {
+  type: 'POOL_HEALTH_CHANGED';
+  previousStatus: PoolHealth['status'];
+  newStatus: PoolHealth['status'];
+  utilizationRate: number;
+  timestamp: Date;
+}
+
+export function calculatePoolHealth(reserve: Reserve): PoolHealth {
+  const utilizationRate = reserve.totalAmount > 0
+    ? (reserve.reservedAmount / reserve.totalAmount)
+    : 0;
+  const status: PoolHealth['status'] = utilizationRate >= 0.9
+    ? 'critical'
+    : utilizationRate >= 0.7
+      ? 'warning'
+      : 'healthy';
+  return { status, utilizationRate, availableAmount: reserve.availableAmount, pendingObligations: 0 };
+}
 
 // Ports
 export interface PoolLedger {
@@ -72,7 +125,6 @@ export class ReserveLiquidityUseCase {
     };
     await this.publisher.publish(event);
 
-    // Check for health changes
     await this.checkHealthChange(reserve, updatedReserve);
 
     return obligation;
@@ -148,3 +200,4 @@ export class QueryPoolHealthUseCase {
     };
   }
 }
+

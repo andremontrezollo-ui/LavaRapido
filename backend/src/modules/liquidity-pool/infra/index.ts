@@ -4,8 +4,7 @@
  * Ledger storage and metrics adapters.
  */
 
-import type { PoolLedger, IdGenerator, EventPublisher } from '../application';
-import type { Reserve, Obligation, PoolEvent } from '../domain';
+import type { PoolLedger, IdGenerator, EventPublisher, Reserve, Obligation, PoolEvent } from '../application';
 
 // In-Memory Pool Ledger
 export class InMemoryPoolLedger implements PoolLedger {
