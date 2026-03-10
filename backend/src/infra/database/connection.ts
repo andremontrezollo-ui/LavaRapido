@@ -1,15 +1,57 @@
-import { createConnection } from 'typeorm';
-import { User } from '../entities/User';
+/**
+ * PostgreSQL database connection pool.
+ * Replaces the placeholder TypeORM/MySQL connection.
+ */
 
-const connection = createConnection({
-    type: 'mysql', // Set the database type
-    host: 'localhost', // Database host
-    port: 3306, // Database port
-    username: 'your_username', // Database username
-    password: 'your_password', // Database password
-    database: 'your_database_name', // Database name
-    entities: [User],
-    synchronize: true,
-});
+import { Pool, PoolClient } from 'pg';
 
-export default connection;
+let pool: Pool | null = null;
+
+export interface DatabaseConfig {
+  connectionString: string;
+  max?: number;
+  idleTimeoutMillis?: number;
+  connectionTimeoutMillis?: number;
+}
+
+export function createPool(config: DatabaseConfig): Pool {
+  pool = new Pool({
+    connectionString: config.connectionString,
+    max: config.max ?? 10,
+    idleTimeoutMillis: config.idleTimeoutMillis ?? 30_000,
+    connectionTimeoutMillis: config.connectionTimeoutMillis ?? 5_000,
+  });
+
+  pool.on('error', (err) => {
+    console.error('[pg-pool] Unexpected client error', err);
+  });
+
+  return pool;
+}
+
+export function getPool(): Pool {
+  if (!pool) {
+    throw new Error('Database pool not initialised. Call createPool() first.');
+  }
+  return pool;
+}
+
+export async function closePool(): Promise<void> {
+  if (pool) {
+    await pool.end();
+    pool = null;
+  }
+}
+
+export async function checkConnection(): Promise<boolean> {
+  try {
+    const client: PoolClient = await getPool().connect();
+    await client.query('SELECT 1');
+    client.release();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export { Pool, PoolClient };
