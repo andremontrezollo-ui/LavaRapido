@@ -20,9 +20,9 @@ export class ApplicationService implements Application {
         }
 
         this.logger.info('Starting application', {
-            version: this.config.app.version,
-            environment: this.config.app.environment,
-            port: this.config.http.port,
+            version: this.config.appVersion,
+            environment: this.config.env,
+            port: this.config.httpPort,
         });
 
         this.httpServer = createServer(async (req, res) => {
@@ -40,7 +40,7 @@ export class ApplicationService implements Application {
 
             if (req.url === '/ready' && req.method === 'GET') {
                 const readiness = await this.container.readinessCheck();
-                res.writeHead(readiness.isReady ? 200 : 503, { 'Content-Type': 'application/json' });
+                res.writeHead(readiness.ready ? 200 : 503, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify(readiness));
                 return;
             }
@@ -50,11 +50,11 @@ export class ApplicationService implements Application {
         });
 
         return new Promise((resolve, reject) => {
-            this.httpServer?.listen(this.config.http.port, this.config.http.host, () => {
+            this.httpServer?.listen(this.config.httpPort, this.config.httpHost, () => {
                 this.isRunning = true;
                 this.logger.info('Application started successfully', {
-                    host: this.config.http.host,
-                    port: this.config.http.port,
+                    host: this.config.httpHost,
+                    port: this.config.httpPort,
                 });
                 resolve();
             });

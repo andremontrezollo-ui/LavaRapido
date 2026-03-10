@@ -1,44 +1,22 @@
-import { RedisClient } from 'redis';
+import Redis from 'ioredis';
+import type { RateLimitStore } from '../../api/middlewares/rate-limit.middleware';
 
-class RedisRateLimitStore {
-    private client: RedisClient;
+const LUA_SCRIPT = `
+local c = redis.call('INCR', KEYS[1])
+if c == 1 then redis.call('EXPIRE', KEYS[1], ARGV[1]) end
+return {c, redis.call('TTL', KEYS[1])}
+`;
 
-    constructor(redisClient: RedisClient) {
-        this.client = redisClient;
-    }
+export class RedisRateLimitStore implements RateLimitStore {
+  constructor(private readonly client: Redis) {}
 
-    // Increment the rate limit for a specific key
-    async increment(key: string, limit: number, period: number): Promise<number> {
-        const currentCount = await new Promise<number>((resolve, reject) => {
-            this.client.incr(key, (err, reply) => {
-                if (err) reject(err);
-                else resolve(reply);
-            });
-        });
-
-        // Set expiration time if it's the first request
-        if (currentCount === 1) {
-            await new Promise<void>((resolve, reject) => {
-                this.client.expire(key, period, (err) => {
-                    if (err) reject(err);
-                    else resolve();
-                });
-            });
-        }
-
-        return currentCount;
-    }
-
-    // Check if the limit has been exceeded
-    async isLimitExceeded(key: string, limit: number): Promise<boolean> {
-        const currentCount = await new Promise<number>((resolve, reject) => {
-            this.client.get(key, (err, reply) => {
-                if (err) reject(err);
-                else resolve(reply ? parseInt(reply) : 0);
-            });
-        });
-        return currentCount >= limit;
-    }
+  async increment(key: string, windowSeconds: number): Promise<{ count: number; ttl: number }> {
+    const result = await this.client.eval(
+      LUA_SCRIPT,
+      1,
+      key,
+      String(windowSeconds),
+    ) as [number, number];
+    return { count: result[0], ttl: result[1] };
+  }
 }
-
-export default RedisRateLimitStore;

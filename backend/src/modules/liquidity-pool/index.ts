@@ -8,6 +8,25 @@
  * Consumed by: payment-scheduler (LIQUIDITY_ALLOCATED)
  */
 
+// Domain layer — entity-level types and business rules
 export * from './domain';
-export * from './application';
+// Application layer — use case types (Reserve, Obligation as plain objects, use cases)
+// Named exports to avoid ambiguity with domain Obligation class
+export {
+  ReserveLiquidityUseCase,
+  ConfirmLiquidationUseCase,
+  QueryPoolHealthUseCase,
+  calculatePoolHealth,
+} from './application';
+export type {
+  PoolLedger,
+  IdGenerator as PoolIdGenerator,
+  EventPublisher as PoolEventPublisher,
+  Reserve,
+  PoolHealth,
+  PoolEvent,
+  LiquidityReservedEvent,
+  LiquidityReleasedEvent,
+  PoolHealthChangedEvent,
+} from './application';
 export * from './infra';

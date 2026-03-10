@@ -25,10 +25,19 @@ const SCHEMA: EnvSchema[] = [
   { key: 'OUTBOX_POLL_INTERVAL_MS', required: false, type: 'number', configKey: 'outboxPollIntervalMs' },
   { key: 'MAX_RETRIES', required: false, type: 'number', configKey: 'maxRetries' },
   { key: 'LOCK_TTL_SECONDS', required: false, type: 'number', configKey: 'lockTtlSeconds' },
+  { key: 'HTTP_PORT', required: false, type: 'number', configKey: 'httpPort' },
+  { key: 'HTTP_HOST', required: false, type: 'string', configKey: 'httpHost' },
+  { key: 'APP_VERSION', required: false, type: 'string', configKey: 'appVersion' },
 ];
 
 const VALID_ENVS = ['development', 'test', 'production'] as const;
 const VALID_LOG_LEVELS = ['debug', 'info', 'warn', 'error'] as const;
+
+/**
+ * ParsedConfig collects raw values from env before they are validated
+ * and cast to the final AppConfig type.
+ */
+type ParsedConfig = Partial<Record<keyof AppConfig, unknown>>;
 
 export function validateEnvSchema(env: Record<string, string | undefined>): {
   valid: boolean;
@@ -36,7 +45,7 @@ export function validateEnvSchema(env: Record<string, string | undefined>): {
   config: AppConfig;
 } {
   const errors: string[] = [];
-  const config: Record<string, unknown> = { ...DEFAULT_CONFIG };
+  const config: ParsedConfig = { ...DEFAULT_CONFIG };
 
   for (const field of SCHEMA) {
     const raw = env[field.key];
