@@ -1,25 +1,36 @@
 /**
  * Environment Schema Validation — fail fast on missing/invalid config.
+ * All variables required for production must be present at startup.
  */
 
 import type { AppConfig } from './app-config';
 import { DEFAULT_CONFIG } from './app-config';
 
-interface EnvSchema {
+interface EnvField {
   key: string;
   required: boolean;
   type: 'string' | 'number';
   configKey: keyof AppConfig;
 }
 
-const SCHEMA: EnvSchema[] = [
+const SCHEMA: EnvField[] = [
   { key: 'APP_ENV', required: false, type: 'string', configKey: 'env' },
-  { key: 'SUPABASE_URL', required: true, type: 'string', configKey: 'supabaseUrl' },
-  { key: 'SUPABASE_ANON_KEY', required: true, type: 'string', configKey: 'supabaseAnonKey' },
-  { key: 'SUPABASE_SERVICE_ROLE_KEY', required: true, type: 'string', configKey: 'supabaseServiceRoleKey' },
+  // Supabase (legacy — kept for backwards compat)
+  { key: 'SUPABASE_URL', required: false, type: 'string', configKey: 'supabaseUrl' },
+  { key: 'SUPABASE_ANON_KEY', required: false, type: 'string', configKey: 'supabaseAnonKey' },
+  { key: 'SUPABASE_SERVICE_ROLE_KEY', required: false, type: 'string', configKey: 'supabaseServiceRoleKey' },
+  // Database
+  { key: 'DATABASE_URL', required: true, type: 'string', configKey: 'databaseUrl' },
+  // Redis
+  { key: 'REDIS_URL', required: true, type: 'string', configKey: 'redisUrl' },
+  // JWT
+  { key: 'JWT_SECRET', required: false, type: 'string', configKey: 'jwtSecret' },
+  { key: 'JWT_PUBLIC_KEY', required: false, type: 'string', configKey: 'jwtPublicKey' },
+  // Rate limiting
+  { key: 'RATE_LIMIT_MAX', required: true, type: 'number', configKey: 'rateLimitMaxRequests' },
+  { key: 'RATE_LIMIT_WINDOW', required: true, type: 'number', configKey: 'rateLimitWindowMinutes' },
+  // Optional
   { key: 'LOG_LEVEL', required: false, type: 'string', configKey: 'logLevel' },
-  { key: 'RATE_LIMIT_MAX_REQUESTS', required: false, type: 'number', configKey: 'rateLimitMaxRequests' },
-  { key: 'RATE_LIMIT_WINDOW_MINUTES', required: false, type: 'number', configKey: 'rateLimitWindowMinutes' },
   { key: 'SESSION_TTL_MINUTES', required: false, type: 'number', configKey: 'sessionTtlMinutes' },
   { key: 'CONFIRMATION_THRESHOLD', required: false, type: 'number', configKey: 'confirmationThreshold' },
   { key: 'OUTBOX_POLL_INTERVAL_MS', required: false, type: 'number', configKey: 'outboxPollIntervalMs' },
@@ -55,6 +66,14 @@ export function validateEnvSchema(env: Record<string, string | undefined>): {
       } else {
         config[field.configKey] = raw.trim();
       }
+    }
+  }
+
+  // JWT: at least one of JWT_SECRET or JWT_PUBLIC_KEY must be set in production
+  if (config['env'] === 'production') {
+    const hasJwt = Boolean(env['JWT_SECRET'] || env['JWT_PUBLIC_KEY']);
+    if (!hasJwt) {
+      errors.push('Either JWT_SECRET or JWT_PUBLIC_KEY must be set in production');
     }
   }
 
