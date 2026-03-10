@@ -1,15 +1,40 @@
-import { createConnection } from 'typeorm';
-import { User } from '../entities/User';
+/**
+ * PostgreSQL connection pool.
+ * Reads DATABASE_URL from environment and provides a shared Pool instance.
+ */
 
-const connection = createConnection({
-    type: 'mysql', // Set the database type
-    host: 'localhost', // Database host
-    port: 3306, // Database port
-    username: 'your_username', // Database username
-    password: 'your_password', // Database password
-    database: 'your_database_name', // Database name
-    entities: [User],
-    synchronize: true,
-});
+import { Pool } from 'pg';
 
-export default connection;
+let pool: Pool | null = null;
+
+export function getDbPool(): Pool {
+  if (!pool) {
+    const connectionString = process.env.DATABASE_URL;
+    if (!connectionString) {
+      throw new Error('DATABASE_URL environment variable is required');
+    }
+    pool = new Pool({
+      connectionString,
+      max: 10,
+      idleTimeoutMillis: 30_000,
+      connectionTimeoutMillis: 5_000,
+    });
+
+    pool.on('error', (err) => {
+      process.stderr.write(JSON.stringify({
+        level: 'error',
+        message: 'Unexpected PostgreSQL pool error',
+        error: err.message,
+        timestamp: new Date().toISOString(),
+      }) + '\n');
+    });
+  }
+  return pool;
+}
+
+export async function closeDbPool(): Promise<void> {
+  if (pool) {
+    await pool.end();
+    pool = null;
+  }
+}
