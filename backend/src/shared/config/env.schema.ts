@@ -17,6 +17,8 @@ const SCHEMA: EnvSchema[] = [
   { key: 'SUPABASE_URL', required: true, type: 'string', configKey: 'supabaseUrl' },
   { key: 'SUPABASE_ANON_KEY', required: true, type: 'string', configKey: 'supabaseAnonKey' },
   { key: 'SUPABASE_SERVICE_ROLE_KEY', required: true, type: 'string', configKey: 'supabaseServiceRoleKey' },
+  { key: 'DATABASE_URL', required: true, type: 'string', configKey: 'databaseUrl' },
+  { key: 'REDIS_URL', required: true, type: 'string', configKey: 'redisUrl' },
   { key: 'LOG_LEVEL', required: false, type: 'string', configKey: 'logLevel' },
   { key: 'RATE_LIMIT_MAX_REQUESTS', required: false, type: 'number', configKey: 'rateLimitMaxRequests' },
   { key: 'RATE_LIMIT_WINDOW_MINUTES', required: false, type: 'number', configKey: 'rateLimitWindowMinutes' },

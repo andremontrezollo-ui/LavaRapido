@@ -7,6 +7,8 @@ export interface AppConfig {
   readonly supabaseUrl: string;
   readonly supabaseAnonKey: string;
   readonly supabaseServiceRoleKey: string;
+  readonly databaseUrl: string;
+  readonly redisUrl: string;
   readonly logLevel: 'debug' | 'info' | 'warn' | 'error';
   readonly rateLimitMaxRequests: number;
   readonly rateLimitWindowMinutes: number;
