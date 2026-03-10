@@ -11,6 +11,10 @@ on:
     paths:
       - 'backend/**'
 
+# Minimal GITHUB_TOKEN permissions for all jobs
+permissions:
+  contents: read
+
 defaults:
   run:
     working-directory: backend

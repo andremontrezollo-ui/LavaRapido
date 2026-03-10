@@ -5,10 +5,10 @@
 
 import { Pool } from 'pg';
 import type Redis from 'ioredis';
-import type { OutboxProcessor } from './../../infra/messaging/outbox-processor';
-import type { PostgresEventBus } from './../../infra/messaging/postgres-event-bus';
-import type { SecureJobScheduler } from './../../infra/scheduler/job-scheduler';
-import type { SagaOrchestrator } from './../../infra/saga/saga-orchestrator';
+import type { OutboxProcessor } from './../messaging/outbox-processor';
+import type { PostgresEventBus } from './../messaging/postgres-event-bus';
+import type { SecureJobScheduler } from './../scheduler/job-scheduler';
+import type { SagaOrchestrator } from './../saga/saga-orchestrator';
 
 export interface ComponentHealth {
   name: string;
