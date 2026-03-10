@@ -2,7 +2,7 @@
  * In-Memory Outbox Store — production would use Supabase table.
  */
 
-import type { OutboxMessage, OutboxStore, OutboxStatus } from '../../shared/events/outbox-message';
+import type { OutboxMessage, OutboxStore, OutboxStatus } from '../shared/events/outbox-message';
 
 export class InMemoryOutboxStore implements OutboxStore {
   private messages = new Map<string, OutboxMessage>();

@@ -1,5 +1,6 @@
 /**
  * Environment Schema Validation — fail fast on missing/invalid config.
+ * Application must NOT start if required variables are absent.
  */
 
 import type { AppConfig } from './app-config';
@@ -13,18 +14,29 @@ interface EnvSchema {
 }
 
 const SCHEMA: EnvSchema[] = [
-  { key: 'APP_ENV', required: false, type: 'string', configKey: 'env' },
-  { key: 'SUPABASE_URL', required: true, type: 'string', configKey: 'supabaseUrl' },
-  { key: 'SUPABASE_ANON_KEY', required: true, type: 'string', configKey: 'supabaseAnonKey' },
-  { key: 'SUPABASE_SERVICE_ROLE_KEY', required: true, type: 'string', configKey: 'supabaseServiceRoleKey' },
-  { key: 'LOG_LEVEL', required: false, type: 'string', configKey: 'logLevel' },
-  { key: 'RATE_LIMIT_MAX_REQUESTS', required: false, type: 'number', configKey: 'rateLimitMaxRequests' },
+  // Core infrastructure — required in production
+  { key: 'DATABASE_URL',   required: true,  type: 'string', configKey: 'databaseUrl' },
+  { key: 'REDIS_URL',      required: true,  type: 'string', configKey: 'redisUrl' },
+  // Auth — at least one is required (JWT_SECRET takes precedence over JWT_PUBLIC_KEY)
+  { key: 'JWT_SECRET',     required: false, type: 'string', configKey: 'jwtSecret' },
+  // Rate limiting — required
+  { key: 'RATE_LIMIT_MAX',    required: true, type: 'number', configKey: 'rateLimitMax' },
+  { key: 'RATE_LIMIT_WINDOW', required: true, type: 'number', configKey: 'rateLimitWindowMs' },
+  // Application
+  { key: 'APP_ENV',        required: false, type: 'string', configKey: 'env' },
+  { key: 'LOG_LEVEL',      required: false, type: 'string', configKey: 'logLevel' },
+  // Supabase (legacy edge functions — optional)
+  { key: 'SUPABASE_URL',              required: false, type: 'string', configKey: 'supabaseUrl' },
+  { key: 'SUPABASE_ANON_KEY',         required: false, type: 'string', configKey: 'supabaseAnonKey' },
+  { key: 'SUPABASE_SERVICE_ROLE_KEY', required: false, type: 'string', configKey: 'supabaseServiceRoleKey' },
+  // Backwards-compat aliases
+  { key: 'RATE_LIMIT_MAX_REQUESTS',   required: false, type: 'number', configKey: 'rateLimitMaxRequests' },
   { key: 'RATE_LIMIT_WINDOW_MINUTES', required: false, type: 'number', configKey: 'rateLimitWindowMinutes' },
-  { key: 'SESSION_TTL_MINUTES', required: false, type: 'number', configKey: 'sessionTtlMinutes' },
-  { key: 'CONFIRMATION_THRESHOLD', required: false, type: 'number', configKey: 'confirmationThreshold' },
-  { key: 'OUTBOX_POLL_INTERVAL_MS', required: false, type: 'number', configKey: 'outboxPollIntervalMs' },
-  { key: 'MAX_RETRIES', required: false, type: 'number', configKey: 'maxRetries' },
-  { key: 'LOCK_TTL_SECONDS', required: false, type: 'number', configKey: 'lockTtlSeconds' },
+  { key: 'SESSION_TTL_MINUTES',       required: false, type: 'number', configKey: 'sessionTtlMinutes' },
+  { key: 'CONFIRMATION_THRESHOLD',    required: false, type: 'number', configKey: 'confirmationThreshold' },
+  { key: 'OUTBOX_POLL_INTERVAL_MS',   required: false, type: 'number', configKey: 'outboxPollIntervalMs' },
+  { key: 'MAX_RETRIES',               required: false, type: 'number', configKey: 'maxRetries' },
+  { key: 'LOCK_TTL_SECONDS',          required: false, type: 'number', configKey: 'lockTtlSeconds' },
 ];
 
 const VALID_ENVS = ['development', 'test', 'production'] as const;
@@ -58,6 +70,15 @@ export function validateEnvSchema(env: Record<string, string | undefined>): {
     }
   }
 
+  // JWT: require JWT_SECRET or JWT_PUBLIC_KEY
+  const hasJwt = !!(env['JWT_SECRET']?.trim() || env['JWT_PUBLIC_KEY']?.trim());
+  if (!hasJwt && env['APP_ENV'] !== 'test') {
+    errors.push('Missing required auth secret: provide JWT_SECRET or JWT_PUBLIC_KEY');
+  }
+  if (env['JWT_PUBLIC_KEY']?.trim() && !config['jwtSecret']) {
+    config['jwtSecret'] = env['JWT_PUBLIC_KEY']!.trim();
+  }
+
   if (config.env && !VALID_ENVS.includes(config.env as any)) {
     errors.push(`APP_ENV must be one of: ${VALID_ENVS.join(', ')}`);
   }
@@ -66,4 +87,18 @@ export function validateEnvSchema(env: Record<string, string | undefined>): {
   }
 
   return { valid: errors.length === 0, errors, config: config as AppConfig };
+}
+
+/**
+ * Validate and load configuration — throws on any missing required variable.
+ * Call this at application startup before any other initialisation.
+ */
+export function loadAndValidateConfig(env: Record<string, string | undefined> = process.env as Record<string, string | undefined>): AppConfig {
+  const { valid, errors, config } = validateEnvSchema(env);
+  if (!valid) {
+    throw new Error(
+      `Configuration error — application cannot start:\n${errors.map(e => `  • ${e}`).join('\n')}`,
+    );
+  }
+  return config;
 }
