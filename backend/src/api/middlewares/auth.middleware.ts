@@ -1,23 +1,29 @@
 /**
- * Authentication Middleware — validates request authentication.
- * Uses HMAC-based token or service-role key validation.
+ * Authentication Middleware — validates JWT Bearer tokens.
  */
 
+import type { JwtVerifier, JwtPayload } from '../security/jwt-verifier';
 import type { Logger } from '../../shared/logging';
 
 export interface AuthResult {
   authenticated: boolean;
+  userId?: string;
+  email?: string;
+  roles?: string[];
+  scopes?: string[];
   scope?: string;
   reason?: string;
 }
 
 export class AuthMiddleware {
   constructor(
-    private readonly serviceRoleKey: string,
+    private readonly jwtVerifier: JwtVerifier,
     private readonly logger: Logger,
+    /** @deprecated kept for backward compatibility */
+    private readonly serviceRoleKey?: string,
   ) {}
 
-  validateServiceRole(authHeader: string | null): AuthResult {
+  validate(authHeader: string | null): AuthResult {
     if (!authHeader) {
       return { authenticated: false, reason: 'Missing Authorization header' };
     }
@@ -29,34 +35,30 @@ export class AuthMiddleware {
 
     const token = parts[1];
 
-    // Constant-time comparison to prevent timing attacks
-    if (!this.constantTimeEqual(token, this.serviceRoleKey)) {
-      this.logger.warn('Authentication failed', { reason: 'invalid_token' });
-      return { authenticated: false, reason: 'Invalid credentials' };
+    const result = this.jwtVerifier.verify(token);
+    if (!result.valid || !result.payload) {
+      this.logger.warn('JWT authentication failed', { reason: result.reason });
+      return { authenticated: false, reason: result.reason ?? 'Invalid token' };
     }
 
-    return { authenticated: true, scope: 'service' };
+    const payload: JwtPayload = result.payload;
+    return {
+      authenticated: true,
+      userId: payload.sub,
+      email: payload.email,
+      roles: payload.roles ?? [],
+      scopes: payload.scopes ?? [],
+      scope: (payload.roles ?? [])[0] ?? 'user',
+    };
   }
 
-  validateAnonKey(authHeader: string | null, anonKey: string): AuthResult {
-    if (!authHeader) {
-      return { authenticated: false, reason: 'Missing Authorization header' };
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    if (!this.constantTimeEqual(token, anonKey)) {
-      return { authenticated: false, reason: 'Invalid anon key' };
-    }
-
-    return { authenticated: true, scope: 'anon' };
+  /** @deprecated Use validate() instead */
+  validateServiceRole(authHeader: string | null): AuthResult {
+    return this.validate(authHeader);
   }
 
-  private constantTimeEqual(a: string, b: string): boolean {
-    if (a.length !== b.length) return false;
-    let mismatch = 0;
-    for (let i = 0; i < a.length; i++) {
-      mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
-    }
-    return mismatch === 0;
+  /** @deprecated Use validate() instead */
+  validateAnonKey(authHeader: string | null, _anonKey: string): AuthResult {
+    return this.validate(authHeader);
   }
 }

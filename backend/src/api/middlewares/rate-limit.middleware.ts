@@ -1,5 +1,7 @@
 /**
- * Rate Limiting Middleware.
+ * Rate Limiting Middleware — configurable max requests per window.
+ * Use RedisRateLimitStore for distributed rate limiting; InMemoryRateLimitStore for testing only.
+ * Default: 100 req/min per (ip, endpoint) pair.
  */
 
 export interface RateLimitResult {
@@ -15,8 +17,8 @@ export interface RateLimitStore {
 export class RateLimitMiddleware {
   constructor(
     private readonly store: RateLimitStore,
-    private readonly maxRequests: number = 10,
-    private readonly windowSeconds: number = 600,
+    private readonly maxRequests: number = 100,
+    private readonly windowSeconds: number = 60,
   ) {}
 
   async check(ipHash: string, endpoint: string): Promise<RateLimitResult> {
@@ -39,7 +41,35 @@ export class RateLimitMiddleware {
 }
 
 /**
- * In-Memory Rate Limit Store.
+ * Redis-backed distributed Rate Limit Store.
+ * Requires an ioredis-compatible client.
+ */
+export interface RedisClient {
+  multi(): {
+    incr(key: string): unknown;
+    expire(key: string, seconds: number): unknown;
+    exec(): Promise<Array<[Error | null, unknown]>>;
+  };
+  ttl(key: string): Promise<number>;
+}
+
+export class RedisRateLimitStore implements RateLimitStore {
+  constructor(private readonly redis: RedisClient) {}
+
+  async increment(key: string, windowSeconds: number): Promise<{ count: number; ttl: number }> {
+    const pipeline = this.redis.multi();
+    pipeline.incr(key);
+    pipeline.expire(key, windowSeconds);
+    const results = await pipeline.exec();
+
+    const count = (results?.[0]?.[1] as number) ?? 1;
+    const ttl = await this.redis.ttl(key);
+    return { count, ttl: ttl > 0 ? ttl : windowSeconds };
+  }
+}
+
+/**
+ * In-Memory Rate Limit Store — for testing and development only.
  */
 export class InMemoryRateLimitStore implements RateLimitStore {
   private entries = new Map<string, { count: number; expiresAt: number }>();
