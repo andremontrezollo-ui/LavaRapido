@@ -16,6 +16,9 @@ defaults:
   run:
     working-directory: backend
 
+permissions:
+  contents: read
+
 jobs:
   ci:
     name: Build, Type-Check, Test, Migrate

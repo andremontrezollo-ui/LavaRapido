@@ -65,10 +65,10 @@ export function validateEnvSchema(env: Record<string, string | undefined>): {
     }
   }
 
-  if (config.env && !VALID_ENVS.includes(config.env as 'development' | 'test' | 'production')) {
+  if (config.env && !VALID_ENVS.includes(config.env as typeof VALID_ENVS[number])) {
     errors.push(`APP_ENV must be one of: ${VALID_ENVS.join(', ')}`);
   }
-  if (config.logLevel && !VALID_LOG_LEVELS.includes(config.logLevel as 'debug' | 'info' | 'warn' | 'error')) {
+  if (config.logLevel && !VALID_LOG_LEVELS.includes(config.logLevel as typeof VALID_LOG_LEVELS[number])) {
     errors.push(`LOG_LEVEL must be one of: ${VALID_LOG_LEVELS.join(', ')}`);
   }
 
