@@ -3,6 +3,15 @@ import { AllocateLiquidityUseCase } from '../application/use-cases/allocate-liqu
 import { InMemoryLiquidityPoolRepository } from '../infra/repositories/liquidity-pool.repository';
 import { LiquidityPool } from '../domain/entities/liquidity-pool.entity';
 import { Amount } from '../domain/value-objects/amount.vo';
+import type { IdempotencyStore, IdempotencyRecord } from '../../../../shared/policies/idempotency-policy';
+
+class InMemoryIdempotencyStore implements IdempotencyStore {
+  private store = new Map<string, IdempotencyRecord>();
+  async get(key: string): Promise<IdempotencyRecord | null> { return this.store.get(key) ?? null; }
+  async save(record: IdempotencyRecord): Promise<void> { this.store.set(record.key, record); }
+  async exists(key: string): Promise<boolean> { return this.store.has(key); }
+  async deleteExpired(_now: Date): Promise<number> { return 0; }
+}
 
 describe('AllocateLiquidityUseCase', () => {
   it('should allocate liquidity from healthy pool', async () => {
@@ -14,8 +23,9 @@ describe('AllocateLiquidityUseCase', () => {
     const events: any[] = [];
     const publisher = { publish: async (e: any) => { events.push(e); } };
     const clock = { now: () => new Date() };
+    const idempotencyStore = new InMemoryIdempotencyStore();
 
-    const uc = new AllocateLiquidityUseCase(repo, publisher, clock);
+    const uc = new AllocateLiquidityUseCase(repo, publisher, clock, idempotencyStore);
     await uc.execute({ allocationId: 'alloc-1', poolId: 'pool-1', amount: 1.5, destination: 'dest' });
 
     expect(events.length).toBe(1);
@@ -30,8 +40,9 @@ describe('AllocateLiquidityUseCase', () => {
 
     const publisher = { publish: async () => {} };
     const clock = { now: () => new Date() };
+    const idempotencyStore = new InMemoryIdempotencyStore();
 
-    const uc = new AllocateLiquidityUseCase(repo, publisher, clock);
+    const uc = new AllocateLiquidityUseCase(repo, publisher, clock, idempotencyStore);
     await expect(uc.execute({ allocationId: 'a', poolId: 'pool-1', amount: 1, destination: 'd' })).rejects.toThrow();
   });
 });
