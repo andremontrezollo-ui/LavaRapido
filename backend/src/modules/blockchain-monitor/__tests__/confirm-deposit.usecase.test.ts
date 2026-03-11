@@ -5,6 +5,17 @@ import { ObservedTransaction } from '../domain/entities/observed-transaction.ent
 import { TxId } from '../domain/value-objects/txid.vo';
 import { ConfirmationCount } from '../domain/value-objects/confirmation-count.vo';
 import { BlockHeight } from '../domain/value-objects/block-height.vo';
+import type { IdempotencyStore, IdempotencyRecord } from '../../../../shared/policies/idempotency-policy';
+
+function makeMockIdempotencyStore(): IdempotencyStore {
+  const store = new Map<string, IdempotencyRecord>();
+  return {
+    async get(key: string) { return store.get(key) ?? null; },
+    async save(record: IdempotencyRecord) { store.set(record.key, record); },
+    async exists(key: string) { return store.has(key); },
+    async deleteExpired() { return 0; },
+  };
+}
 
 describe('ConfirmDepositUseCase', () => {
   const txHash = 'a'.repeat(64);
@@ -22,8 +33,9 @@ describe('ConfirmDepositUseCase', () => {
     const events: any[] = [];
     const publisher = { publish: async (e: any) => { events.push(e); } };
     const clock = { now: () => new Date() };
+    const idempotencyStore = makeMockIdempotencyStore();
 
-    const uc = new ConfirmDepositUseCase(repo, publisher, clock);
+    const uc = new ConfirmDepositUseCase(repo, publisher, clock, idempotencyStore);
     const result = await uc.execute(txHash, 6);
 
     expect(result.isConfirmed).toBe(true);
@@ -36,8 +48,9 @@ describe('ConfirmDepositUseCase', () => {
     const events: any[] = [];
     const publisher = { publish: async (e: any) => { events.push(e); } };
     const clock = { now: () => new Date() };
+    const idempotencyStore = makeMockIdempotencyStore();
 
-    const uc = new ConfirmDepositUseCase(repo, publisher, clock);
+    const uc = new ConfirmDepositUseCase(repo, publisher, clock, idempotencyStore);
     const result = await uc.execute(txHash, 2);
 
     expect(result.isConfirmed).toBe(false);
