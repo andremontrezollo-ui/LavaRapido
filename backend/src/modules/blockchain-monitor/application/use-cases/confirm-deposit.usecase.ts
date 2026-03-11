@@ -14,21 +14,23 @@ import { IdempotencyGuard } from '../../../../shared/policies/idempotency-policy
 
 export class ConfirmDepositUseCase {
   private readonly policy = new ConfirmationThresholdPolicy();
-  private readonly idempotencyGuard: IdempotencyGuard;
+  private readonly idempotencyGuard: IdempotencyGuard | null;
 
   constructor(
     private readonly repo: ObservedTransactionRepository,
     private readonly publisher: BlockchainEventPublisher,
     private readonly clock: BlockchainClock,
-    idempotencyStore: IdempotencyStore,
+    idempotencyStore?: IdempotencyStore,
   ) {
-    this.idempotencyGuard = new IdempotencyGuard(idempotencyStore, 7200);
+    this.idempotencyGuard = idempotencyStore
+      ? new IdempotencyGuard(idempotencyStore, 7200)
+      : null;
   }
 
   async execute(txId: string, confirmations: number): Promise<DepositConfirmationDto> {
     const idempotencyKey = `confirm-deposit:${txId}:${confirmations}`;
 
-    return this.idempotencyGuard.executeOnce(idempotencyKey, async () => {
+    const run = async (): Promise<DepositConfirmationDto> => {
       const tx = await this.repo.findByTxId(txId);
       if (!tx) throw new Error(`Transaction ${txId} not found`);
 
@@ -51,6 +53,11 @@ export class ConfirmDepositUseCase {
         requiredConfirmations: result.requiredConfirmations,
         ...(result.isConfirmed ? { confirmedAt: now.toISOString() } : {}),
       };
-    });
+    };
+
+    if (this.idempotencyGuard) {
+      return this.idempotencyGuard.executeOnce(idempotencyKey, run);
+    }
+    return run();
   }
 }
