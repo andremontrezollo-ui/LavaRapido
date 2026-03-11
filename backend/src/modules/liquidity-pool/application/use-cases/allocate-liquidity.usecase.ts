@@ -14,21 +14,23 @@ import { IdempotencyGuard } from '../../../../shared/policies/idempotency-policy
 
 export class AllocateLiquidityUseCase {
   private readonly policy = new AllocationPolicy();
-  private readonly idempotencyGuard: IdempotencyGuard;
+  private readonly idempotencyGuard: IdempotencyGuard | null;
 
   constructor(
     private readonly poolRepo: LiquidityPoolRepository,
     private readonly publisher: PoolEventPublisher,
     private readonly clock: PoolClock,
-    idempotencyStore: IdempotencyStore,
+    idempotencyStore?: IdempotencyStore,
   ) {
-    this.idempotencyGuard = new IdempotencyGuard(idempotencyStore, 3600);
+    this.idempotencyGuard = idempotencyStore
+      ? new IdempotencyGuard(idempotencyStore, 3600)
+      : null;
   }
 
   async execute(dto: LiquidityAllocationDto): Promise<void> {
     const idempotencyKey = `allocate:${dto.allocationId}`;
 
-    await this.idempotencyGuard.executeOnce(idempotencyKey, async () => {
+    const run = async () => {
       const pool = await this.poolRepo.findById(dto.poolId);
       if (!pool) throw new Error(`Pool ${dto.poolId} not found`);
 
@@ -43,6 +45,12 @@ export class AllocateLiquidityUseCase {
       pool.reserve(Amount.btc(dto.amount), this.clock.now());
       await this.poolRepo.save(pool);
       await this.publisher.publish(createLiquidityAllocatedEvent(dto.allocationId, dto.amount, dto.poolId));
-    });
+    };
+
+    if (this.idempotencyGuard) {
+      await this.idempotencyGuard.executeOnce(idempotencyKey, run);
+    } else {
+      await run();
+    }
   }
 }

@@ -18,22 +18,24 @@ import { IdempotencyGuard } from '../../../../shared/policies/idempotency-policy
 
 export class SchedulePaymentUseCase {
   private readonly delayPolicy = new PaymentDelayPolicy();
-  private readonly idempotencyGuard: IdempotencyGuard;
+  private readonly idempotencyGuard: IdempotencyGuard | null;
 
   constructor(
     private readonly repo: ScheduledPaymentRepository,
     private readonly publisher: PaymentEventPublisher,
     private readonly clock: PaymentClock,
     private readonly idGenerator: { generate(): string },
-    idempotencyStore: IdempotencyStore,
+    idempotencyStore?: IdempotencyStore,
   ) {
-    this.idempotencyGuard = new IdempotencyGuard(idempotencyStore, 3600);
+    this.idempotencyGuard = idempotencyStore
+      ? new IdempotencyGuard(idempotencyStore, 3600)
+      : null;
   }
 
   async execute(req: SchedulePaymentRequest): Promise<ScheduledPaymentDto> {
     const idempotencyKey = `schedule:${req.destination}:${req.amount}:${req.delaySeconds}`;
 
-    return this.idempotencyGuard.executeOnce(idempotencyKey, async () => {
+    const run = async (): Promise<ScheduledPaymentDto> => {
       const now = this.clock.now();
       const delay = this.delayPolicy.evaluate({ amount: req.amount, requestedDelaySeconds: req.delaySeconds });
       const scheduledFor = new Date(now.getTime() + delay.actualDelaySeconds * 1000);
@@ -60,6 +62,11 @@ export class SchedulePaymentUseCase {
         createdAt: now.toISOString(),
         executedAt: null,
       };
-    });
+    };
+
+    if (this.idempotencyGuard) {
+      return this.idempotencyGuard.executeOnce(idempotencyKey, run);
+    }
+    return run();
   }
 }
