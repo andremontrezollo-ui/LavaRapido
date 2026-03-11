@@ -1,13 +1,15 @@
 /**
  * Health Check Controller — liveness and readiness endpoints.
+ * Verifies PostgreSQL, Redis, outbox backlog, scheduler, and saga state.
  */
 
 import type { OutboxStore } from '../../shared/events/outbox-message';
 import type { JobStore } from '../../infra/scheduler/job-scheduler';
+import type { InfrastructureHealthChecker, ReadinessReport } from '../../infra/observability/health';
 
 export interface HealthStatus {
   status: 'healthy' | 'degraded' | 'unhealthy';
-  checks: Record<string, { status: string; details?: string }>;
+  checks: Record<string, { status: string; details?: string; latencyMs?: number }>;
   uptime: number;
   timestamp: string;
 }
@@ -16,6 +18,7 @@ export class HealthController {
   private readonly startTime = Date.now();
 
   constructor(
+    private readonly healthChecker: InfrastructureHealthChecker | null = null,
     private readonly outbox: OutboxStore | null = null,
     private readonly jobStore: JobStore | null = null,
   ) {}
@@ -25,9 +28,18 @@ export class HealthController {
   }
 
   async readiness(): Promise<HealthStatus> {
+    if (this.healthChecker) {
+      const report: ReadinessReport = await this.healthChecker.check();
+      return {
+        status: report.status,
+        checks: report.checks,
+        uptime: report.uptime,
+        timestamp: report.timestamp,
+      };
+    }
+
     const checks: Record<string, { status: string; details?: string }> = {};
 
-    // Check outbox
     if (this.outbox) {
       try {
         const pendingCount = await this.outbox.countByStatus('pending');
@@ -41,7 +53,6 @@ export class HealthController {
       }
     }
 
-    // Check scheduler
     if (this.jobStore) {
       try {
         const dueJobs = await this.jobStore.findDue(new Date(), 100);

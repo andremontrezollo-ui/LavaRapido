@@ -14,9 +14,11 @@ interface EnvSchema {
 
 const SCHEMA: EnvSchema[] = [
   { key: 'APP_ENV', required: false, type: 'string', configKey: 'env' },
-  { key: 'SUPABASE_URL', required: true, type: 'string', configKey: 'supabaseUrl' },
-  { key: 'SUPABASE_ANON_KEY', required: true, type: 'string', configKey: 'supabaseAnonKey' },
-  { key: 'SUPABASE_SERVICE_ROLE_KEY', required: true, type: 'string', configKey: 'supabaseServiceRoleKey' },
+  { key: 'DATABASE_URL', required: true, type: 'string', configKey: 'databaseUrl' },
+  { key: 'REDIS_URL', required: true, type: 'string', configKey: 'redisUrl' },
+  { key: 'SUPABASE_URL', required: false, type: 'string', configKey: 'supabaseUrl' },
+  { key: 'SUPABASE_ANON_KEY', required: false, type: 'string', configKey: 'supabaseAnonKey' },
+  { key: 'SUPABASE_SERVICE_ROLE_KEY', required: false, type: 'string', configKey: 'supabaseServiceRoleKey' },
   { key: 'LOG_LEVEL', required: false, type: 'string', configKey: 'logLevel' },
   { key: 'RATE_LIMIT_MAX_REQUESTS', required: false, type: 'number', configKey: 'rateLimitMaxRequests' },
   { key: 'RATE_LIMIT_WINDOW_MINUTES', required: false, type: 'number', configKey: 'rateLimitWindowMinutes' },
@@ -25,6 +27,8 @@ const SCHEMA: EnvSchema[] = [
   { key: 'OUTBOX_POLL_INTERVAL_MS', required: false, type: 'number', configKey: 'outboxPollIntervalMs' },
   { key: 'MAX_RETRIES', required: false, type: 'number', configKey: 'maxRetries' },
   { key: 'LOCK_TTL_SECONDS', required: false, type: 'number', configKey: 'lockTtlSeconds' },
+  { key: 'HTTP_PORT', required: false, type: 'number', configKey: 'httpPort' },
+  { key: 'HTTP_HOST', required: false, type: 'string', configKey: 'httpHost' },
 ];
 
 const VALID_ENVS = ['development', 'test', 'production'] as const;
@@ -65,5 +69,10 @@ export function validateEnvSchema(env: Record<string, string | undefined>): {
     errors.push(`LOG_LEVEL must be one of: ${VALID_LOG_LEVELS.join(', ')}`);
   }
 
-  return { valid: errors.length === 0, errors, config: config as AppConfig };
+  const port = (config.httpPort as number) ?? 3000;
+  const host = (config.httpHost as string) ?? '0.0.0.0';
+  config.app = { version: '1.0.0', environment: (config.env as string) ?? 'development' };
+  config.http = { port, host };
+
+  return { valid: errors.length === 0, errors, config: config as unknown as AppConfig };
 }
