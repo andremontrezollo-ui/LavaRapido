@@ -1,7 +1,7 @@
 import { createServer } from 'http';
 import { Application } from './types';
 import { DependencyContainer } from './dependency-container';
-import { Logger } from '../shared/logging/secure-logger';
+import type { Logger } from '../shared/logging';
 import { AppConfig } from '../shared/config/app-config';
 
 export class ApplicationService implements Application {
@@ -20,9 +20,9 @@ export class ApplicationService implements Application {
         }
 
         this.logger.info('Starting application', {
-            version: this.config.app.version,
-            environment: this.config.app.environment,
-            port: this.config.http.port,
+            version: '1.0.0',
+            environment: this.config.env,
+            port: this.config.httpPort,
         });
 
         this.httpServer = createServer(async (req, res) => {
@@ -50,11 +50,11 @@ export class ApplicationService implements Application {
         });
 
         return new Promise((resolve, reject) => {
-            this.httpServer?.listen(this.config.http.port, this.config.http.host, () => {
+            this.httpServer?.listen(this.config.httpPort, this.config.httpHost, () => {
                 this.isRunning = true;
                 this.logger.info('Application started successfully', {
-                    host: this.config.http.host,
-                    port: this.config.http.port,
+                    host: this.config.httpHost,
+                    port: this.config.httpPort,
                 });
                 resolve();
             });

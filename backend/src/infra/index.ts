@@ -25,4 +25,4 @@ export type { ScheduledJob, JobStore, JobStatus } from './scheduler/job-schedule
 
 // Observability
 export { StructuredLogger } from './observability/StructuredLogger';
-export { SecurityHeaders } from './security/SecurityHeaders';
+export { SECURITY_HEADERS } from './security/SecurityHeaders';

@@ -1,15 +1,11 @@
-import { createConnection } from 'typeorm';
-import { User } from '../entities/User';
+import { Pool } from 'pg';
 
-const connection = createConnection({
-    type: 'mysql', // Set the database type
-    host: 'localhost', // Database host
-    port: 3306, // Database port
-    username: 'your_username', // Database username
-    password: 'your_password', // Database password
-    database: 'your_database_name', // Database name
-    entities: [User],
-    synchronize: true,
+const pool = new Pool({
+    host: process.env.DB_HOST ?? 'localhost',
+    port: parseInt(process.env.DB_PORT ?? '5432', 10),
+    user: process.env.DB_USER ?? 'postgres',
+    password: process.env.DB_PASSWORD ?? '',
+    database: process.env.DB_NAME ?? 'lavarapido',
 });
 
-export default connection;
+export default pool;

@@ -25,6 +25,8 @@ const SCHEMA: EnvSchema[] = [
   { key: 'OUTBOX_POLL_INTERVAL_MS', required: false, type: 'number', configKey: 'outboxPollIntervalMs' },
   { key: 'MAX_RETRIES', required: false, type: 'number', configKey: 'maxRetries' },
   { key: 'LOCK_TTL_SECONDS', required: false, type: 'number', configKey: 'lockTtlSeconds' },
+  { key: 'HTTP_PORT', required: false, type: 'number', configKey: 'httpPort' },
+  { key: 'HTTP_HOST', required: false, type: 'string', configKey: 'httpHost' },
 ];
 
 const VALID_ENVS = ['development', 'test', 'production'] as const;
@@ -65,5 +67,5 @@ export function validateEnvSchema(env: Record<string, string | undefined>): {
     errors.push(`LOG_LEVEL must be one of: ${VALID_LOG_LEVELS.join(', ')}`);
   }
 
-  return { valid: errors.length === 0, errors, config: config as AppConfig };
+  return { valid: errors.length === 0, errors, config: config as unknown as AppConfig };
 }

@@ -5,35 +5,31 @@
  * Implements ports defined in application layer.
  */
 
-import type { BlockchainDataSource, EventPublisher } from '../application';
-import type { BlockchainEvent, TransactionId, BlockHeight } from '../domain';
+import type { BlockchainSource, BlockchainEventPublisher } from '../application';
+import type { DomainEvent } from '../../../shared/events/DomainEvent';
+import { BlockHeight } from '../domain/value-objects/block-height.vo';
+import { TxId } from '../domain/value-objects/txid.vo';
 
 // Simulated/Mock Data Source for Development
-export class SimulatedBlockchainDataSource implements BlockchainDataSource {
+export class SimulatedBlockchainDataSource implements BlockchainSource {
   private currentHeight = 800000;
   private transactions = new Map<string, { confirmations: number }>();
 
-  async getCurrentHeight(): Promise<BlockHeight> {
-    return { value: this.currentHeight };
+  async poll(): Promise<[]> {
+    return [];
   }
 
-  async getTransaction(txId: TransactionId): Promise<{ confirmations: number } | null> {
-    return this.transactions.get(txId.hash) ?? null;
+  async getCurrentBlockHeight(): Promise<number> {
+    return this.currentHeight;
   }
 
-  async getFeeEstimates(): Promise<{ low: number; medium: number; high: number }> {
-    // Simulated fee rates in sat/vB
-    return {
-      low: 5,
-      medium: 15,
-      high: 30,
-    };
+  async getTransactionConfirmations(txId: string): Promise<number | null> {
+    return this.transactions.get(txId)?.confirmations ?? null;
   }
 
   // Test helpers
   simulateNewBlock(): void {
     this.currentHeight++;
-    // Increment confirmations for all tracked transactions
     for (const [hash, tx] of this.transactions) {
       this.transactions.set(hash, { confirmations: tx.confirmations + 1 });
     }
@@ -45,23 +41,23 @@ export class SimulatedBlockchainDataSource implements BlockchainDataSource {
 }
 
 // In-Memory Event Publisher for Development
-export class InMemoryEventPublisher implements EventPublisher {
-  private events: BlockchainEvent[] = [];
-  private subscribers: Array<(event: BlockchainEvent) => void> = [];
+export class InMemoryEventPublisher implements BlockchainEventPublisher {
+  private events: DomainEvent[] = [];
+  private subscribers: Array<(event: DomainEvent) => void> = [];
 
-  async publish(event: BlockchainEvent): Promise<void> {
+  async publish(event: DomainEvent): Promise<void> {
     this.events.push(event);
     this.subscribers.forEach(sub => sub(event));
   }
 
-  subscribe(handler: (event: BlockchainEvent) => void): () => void {
+  subscribe(handler: (event: DomainEvent) => void): () => void {
     this.subscribers.push(handler);
     return () => {
       this.subscribers = this.subscribers.filter(s => s !== handler);
     };
   }
 
-  getEvents(): readonly BlockchainEvent[] {
+  getEvents(): readonly DomainEvent[] {
     return [...this.events];
   }
 
