@@ -115,8 +115,16 @@ export class ProductionContainer implements DependencyContainer {
       config.rateLimitWindowMinutes * 60,
     );
 
+    const serviceRoleKey = config.supabaseServiceRoleKey;
+    if (!serviceRoleKey) {
+      throw new Error(
+        'Missing required environment variable: SUPABASE_SERVICE_ROLE_KEY. ' +
+        'Required for AuthMiddleware to validate service-role tokens.',
+      );
+    }
+
     this.authMiddleware = new AuthMiddleware(
-      config.supabaseServiceRoleKey ?? '',
+      serviceRoleKey,
       this.logger,
     );
   }

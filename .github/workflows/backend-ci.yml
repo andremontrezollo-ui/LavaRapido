@@ -16,6 +16,8 @@ jobs:
   build-and-test:
     name: Build, Type-check & Test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     services:
       postgres:
@@ -65,7 +67,7 @@ jobs:
 
       - name: Type-check
         working-directory: backend
-        run: npx tsc --noEmit 2>/dev/null || true
+        run: npx tsc --noEmit
 
       - name: Run migrations
         working-directory: backend
@@ -77,7 +79,7 @@ jobs:
 
       - name: Run unit tests
         working-directory: backend
-        run: npm test 2>/dev/null || npx jest --passWithNoTests 2>/dev/null || true
+        run: npm test
 
       - name: Security audit
         working-directory: backend

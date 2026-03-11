@@ -31,12 +31,12 @@ export class RedisDistributedLock implements DistributedLock {
 
   async acquire(key: string, ttlSeconds: number): Promise<boolean> {
     const token = randomBytes(16).toString('hex');
-    const result = await (this.redis as any).set(
+    const result = await this.redis.set(
       key,
       token,
-      'NX',
       'PX',
       ttlSeconds * 1000,
+      'NX',
     );
     if (result === 'OK') {
       this.tokens.set(key, token);

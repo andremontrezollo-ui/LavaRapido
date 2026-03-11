@@ -3,6 +3,8 @@
 -- event_deliveries: tracking delivery per subscriber
 -- dead_letter_queue: permanently failed events
 
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 CREATE TABLE IF NOT EXISTS events (
   id           UUID        PRIMARY KEY,
   event_type   TEXT        NOT NULL,
