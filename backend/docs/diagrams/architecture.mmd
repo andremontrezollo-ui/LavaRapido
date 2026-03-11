@@ -1,0 +1,27 @@
+graph TD
+    Client["Client / Webhook Source"]
+    API["API Layer\n(Express.js Controllers + Middlewares)"]
+    Application["Application Layer\n(Use Cases + Idempotency Guards)"]
+    Domain["Domain Layer\n(Aggregates + Value Objects + Policies)"]
+    EventBus["ResilientEventBus\n(Retry + DLQ + Deduplication)"]
+    Outbox["OutboxStore\n(Transactional Event Persistence)"]
+    Processor["OutboxProcessor\n(Polling + Publish)"]
+    Handlers["Event Handlers\n(Per-Module Subscribers)"]
+    Persistence["Persistence Stores\n(In-Memory → Supabase)"]
+    Saga["SagaOrchestrator\n(Step + Compensation)"]
+    Scheduler["SecureJobScheduler\n(Due-Job Polling + Lock)"]
+
+    Client -->|HTTP Request| API
+    API -->|Validated DTO| Application
+    Application -->|Domain Operations| Domain
+    Domain -->|Domain Events| EventBus
+    Application -->|Save Event| Outbox
+    Outbox -->|Poll Pending| Processor
+    Processor -->|Publish| EventBus
+    EventBus -->|Dispatch| Handlers
+    Handlers -->|Use Cases| Application
+    Application -->|Persist| Persistence
+    Application -->|Execute Saga| Saga
+    Saga -->|Step Execution| Application
+    Scheduler -->|Execute Job| Application
+    Scheduler -->|Acquire Lock| Persistence

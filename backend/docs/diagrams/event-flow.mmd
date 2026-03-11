@@ -1,0 +1,34 @@
+graph LR
+    BlockchainMonitor["blockchain-monitor"]
+    EventBus["ResilientEventBus"]
+    LiquidityPool["liquidity-pool"]
+    PaymentScheduler["payment-scheduler"]
+    LogMinimizer["log-minimizer"]
+    DLQ["Dead Letter Queue"]
+    SagaOrchestrator["SagaOrchestrator"]
+
+    BlockchainMonitor -->|"DEPOSIT_DETECTED"| EventBus
+    BlockchainMonitor -->|"DEPOSIT_CONFIRMED"| EventBus
+    BlockchainMonitor -->|"TRANSACTION_REORG_DETECTED"| EventBus
+
+    EventBus -->|"DEPOSIT_CONFIRMED"| LiquidityPool
+    LiquidityPool -->|"LIQUIDITY_ALLOCATED"| EventBus
+    LiquidityPool -->|"OBLIGATION_RESERVED"| EventBus
+    LiquidityPool -->|"POOL_HEALTH_WARNING"| EventBus
+    LiquidityPool -->|"POOL_REBALANCED"| EventBus
+
+    EventBus -->|"LIQUIDITY_ALLOCATED"| PaymentScheduler
+    PaymentScheduler -->|"PAYMENT_SCHEDULED"| EventBus
+    PaymentScheduler -->|"PAYMENT_DUE"| EventBus
+    PaymentScheduler -->|"PAYMENT_EXECUTED"| EventBus
+    PaymentScheduler -->|"PAYMENT_CANCELLED"| EventBus
+
+    EventBus -->|"PAYMENT_EXECUTED"| LogMinimizer
+    LogMinimizer -->|"LOG_REDACTED"| EventBus
+    LogMinimizer -->|"LOG_PURGED"| EventBus
+
+    EventBus -->|"DEPOSIT_CONFIRMED"| SagaOrchestrator
+    SagaOrchestrator -->|"SAGA_STEP_COMPLETED"| EventBus
+    SagaOrchestrator -->|"SAGA_COMPENSATION_TRIGGERED"| EventBus
+
+    EventBus -->|"max retries exceeded"| DLQ

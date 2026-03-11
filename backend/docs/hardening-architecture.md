@@ -1,8 +1,16 @@
-# Hardened Backend Architecture
+---
+version: "1.1.0"
+date: "2026-03-11"
+authors: ["LavaRapido Engineering"]
+---
+
+# Hardened Backend Architecture — LavaRapido
+
+> **Related:** [System Overview](./system-overview.md) · [Architecture](./architecture.md) · [Security Model](./security-model.md) · [SRE Readiness](./sre-readiness.md)
 
 ## Overview
 
-The ShadowMix backend follows **Clean Architecture** with **DDD** per module, enforcing strict layer boundaries: `domain → application → infrastructure → interfaces`.
+The LavaRapido backend follows **Clean Architecture** with **DDD** per module, enforcing strict layer boundaries: `domain → application → infrastructure → interfaces`.
 
 ## Architecture Layers
 
@@ -155,3 +163,22 @@ States: `started → step_completed → completed | compensating → compensated
 - Current persistence is in-memory (suitable for edge function lifecycle)
 - Production deployment should back stores with Supabase tables
 - Distributed locks are process-local (use Supabase advisory locks for multi-instance)
+
+---
+
+## Implementation References
+
+| Component | Source File |
+|-----------|-------------|
+| `ResilientEventBus` | [`backend/src/shared/events/InMemoryEventBus.ts`](../src/shared/events/InMemoryEventBus.ts) |
+| `IdempotencyGuard` | [`backend/src/shared/policies/idempotency-policy.ts`](../src/shared/policies/idempotency-policy.ts) |
+| `SecureLogger` | [`backend/src/shared/logging/logger.ts`](../src/shared/logging/logger.ts) |
+| `DefaultRedactionPolicy` | [`backend/src/shared/logging/redaction-policy.ts`](../src/shared/logging/redaction-policy.ts) |
+| `OutboxStore` / `OutboxProcessor` | [`backend/src/infra/persistence/outbox.store.ts`](../src/infra/persistence/outbox.store.ts) · [`backend/src/infra/messaging/outbox-processor.ts`](../src/infra/messaging/outbox-processor.ts) |
+| `InboxStore` | [`backend/src/infra/persistence/inbox.store.ts`](../src/infra/persistence/inbox.store.ts) |
+| `SagaOrchestrator` | [`backend/src/infra/saga/saga-orchestrator.ts`](../src/infra/saga/saga-orchestrator.ts) |
+| `DistributedLock` | [`backend/src/infra/locks/distributed-lock.ts`](../src/infra/locks/distributed-lock.ts) |
+| `AuthMiddleware` | [`backend/src/api/middlewares/auth.middleware.ts`](../src/api/middlewares/auth.middleware.ts) |
+| `AuthorizationMiddleware` | [`backend/src/api/middlewares/authorization.middleware.ts`](../src/api/middlewares/authorization.middleware.ts) |
+| `RateLimitMiddleware` | [`backend/src/api/middlewares/rate-limit.middleware.ts`](../src/api/middlewares/rate-limit.middleware.ts) |
+| `loadConfig()` | [`backend/src/shared/config/load-config.ts`](../src/shared/config/load-config.ts) |
