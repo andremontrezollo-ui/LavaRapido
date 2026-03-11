@@ -4,8 +4,7 @@
  * Ledger storage and metrics adapters.
  */
 
-import type { PoolLedger, IdGenerator, EventPublisher } from '../application';
-import type { Reserve, Obligation, PoolEvent } from '../domain';
+import type { PoolLedger, IdGenerator, EventPublisher, Reserve, LiquidityObligation, PoolEvent } from '../application';
 
 // In-Memory Pool Ledger
 export class InMemoryPoolLedger implements PoolLedger {
@@ -15,7 +14,7 @@ export class InMemoryPoolLedger implements PoolLedger {
     reservedAmount: 0,
     currency: 'BTC',
   };
-  private obligations = new Map<string, Obligation>();
+  private obligations = new Map<string, LiquidityObligation>();
 
   async getReserve(): Promise<Reserve> {
     return { ...this.reserve };
@@ -25,19 +24,19 @@ export class InMemoryPoolLedger implements PoolLedger {
     this.reserve = reserve;
   }
 
-  async saveObligation(obligation: Obligation): Promise<void> {
+  async saveObligation(obligation: LiquidityObligation): Promise<void> {
     this.obligations.set(obligation.id, obligation);
   }
 
-  async findObligation(id: string): Promise<Obligation | null> {
+  async findObligation(id: string): Promise<LiquidityObligation | null> {
     return this.obligations.get(id) ?? null;
   }
 
-  async updateObligation(obligation: Obligation): Promise<void> {
+  async updateObligation(obligation: LiquidityObligation): Promise<void> {
     this.obligations.set(obligation.id, obligation);
   }
 
-  async findPendingObligations(): Promise<Obligation[]> {
+  async findPendingObligations(): Promise<LiquidityObligation[]> {
     return Array.from(this.obligations.values()).filter(
       o => o.status === 'pending'
     );

@@ -26,7 +26,7 @@ export interface DepositSagaContext {
 export interface DepositSagaDependencies {
   confirmDeposit: (txId: string) => Promise<void>;
   reserveLiquidity: (poolId: string, amount: number) => Promise<string>; // returns allocationId
-  schedulPayment: (destination: string, amount: number, delaySeconds: number) => Promise<string>; // returns paymentId
+  schedulePayment: (destination: string, amount: number, delaySeconds: number) => Promise<string>; // returns paymentId
   releaseLiquidity: (poolId: string, allocationId: string) => Promise<void>;
   markDepositUnprocessed: (txId: string) => Promise<void>;
   logger: Logger;
@@ -71,7 +71,7 @@ export function createDepositSagaSteps(
         deps.logger.info('Saga: scheduling payments', { step: 'schedule_payments', count: ctx.destinations.length, correlationId: ctx.correlationId });
         for (const dest of ctx.destinations) {
           const jitter = Math.floor(Math.random() * 300) + 60;
-          const paymentId = await deps.schedulPayment(dest, perDestinationAmount, jitter);
+          const paymentId = await deps.schedulePayment(dest, perDestinationAmount, jitter);
           paymentIds.push(paymentId);
         }
       },

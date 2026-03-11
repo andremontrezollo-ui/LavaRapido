@@ -4,25 +4,79 @@
  * Use cases: reserve liquidity, confirm liquidation, query health.
  */
 
-import type {
-  Reserve,
-  Obligation,
-  PoolHealth,
-  PoolEvent,
-  LiquidityReservedEvent,
-  LiquidityReleasedEvent,
-  PoolHealthChangedEvent
-} from '../domain';
-import { calculatePoolHealth } from '../domain';
+// Application-level contracts (data transfer types, not domain entities)
+export interface Reserve {
+  totalAmount: number;
+  availableAmount: number;
+  reservedAmount: number;
+  currency: string;
+}
+
+export interface LiquidityObligation {
+  id: string;
+  amount: number;
+  createdAt: Date;
+  status: 'pending' | 'fulfilled' | 'expired';
+}
+
+export interface PoolHealth {
+  status: 'healthy' | 'warning' | 'critical';
+  utilizationRate: number;
+  availableRate: number;
+  pendingObligations: number;
+}
+
+export interface LiquidityReservedEvent {
+  type: 'LIQUIDITY_RESERVED';
+  obligationId: string;
+  amount: number;
+  timestamp: Date;
+}
+
+export interface LiquidityReleasedEvent {
+  type: 'LIQUIDITY_RELEASED';
+  obligationId: string;
+  amount: number;
+  reason: string;
+  timestamp: Date;
+}
+
+export interface PoolHealthChangedEvent {
+  type: 'POOL_HEALTH_CHANGED';
+  previousStatus: string;
+  newStatus: string;
+  utilizationRate: number;
+  timestamp: Date;
+}
+
+export type PoolEvent = LiquidityReservedEvent | LiquidityReleasedEvent | PoolHealthChangedEvent;
+
+/**
+ * Calculates pool health based on available reserve ratio.
+ * - Critical: availableRate < 10% (pool near depletion)
+ * - Warning: availableRate < 20% (low liquidity)
+ * - Healthy: availableRate >= 20%
+ */
+function calculatePoolHealth(reserve: Reserve): Omit<PoolHealth, 'pendingObligations'> {
+  if (reserve.totalAmount <= 0) {
+    return { status: 'critical', utilizationRate: 1, availableRate: 0 };
+  }
+  const utilizationRate = reserve.reservedAmount / reserve.totalAmount;
+  const availableRate = reserve.availableAmount / reserve.totalAmount;
+  let status: 'healthy' | 'warning' | 'critical' = 'healthy';
+  if (availableRate < 0.1) status = 'critical';
+  else if (availableRate < 0.2) status = 'warning';
+  return { status, utilizationRate, availableRate };
+}
 
 // Ports
 export interface PoolLedger {
   getReserve(): Promise<Reserve>;
   updateReserve(reserve: Reserve): Promise<void>;
-  saveObligation(obligation: Obligation): Promise<void>;
-  findObligation(id: string): Promise<Obligation | null>;
-  updateObligation(obligation: Obligation): Promise<void>;
-  findPendingObligations(): Promise<Obligation[]>;
+  saveObligation(obligation: LiquidityObligation): Promise<void>;
+  findObligation(id: string): Promise<LiquidityObligation | null>;
+  updateObligation(obligation: LiquidityObligation): Promise<void>;
+  findPendingObligations(): Promise<LiquidityObligation[]>;
 }
 
 export interface IdGenerator {
@@ -41,14 +95,14 @@ export class ReserveLiquidityUseCase {
     private readonly publisher: EventPublisher
   ) {}
 
-  async execute(amount: number): Promise<Obligation | null> {
+  async execute(amount: number): Promise<LiquidityObligation | null> {
     const reserve = await this.ledger.getReserve();
 
     if (reserve.availableAmount < amount) {
       return null; // Insufficient liquidity
     }
 
-    const obligation: Obligation = {
+    const obligation: LiquidityObligation = {
       id: this.idGenerator.generate(),
       amount,
       createdAt: new Date(),
