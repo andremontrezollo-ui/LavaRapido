@@ -1,15 +1,54 @@
-import { createConnection } from 'typeorm';
-import { User } from '../entities/User';
+/**
+ * PostgreSQL Connection Pool — production-grade, fail-fast on missing DATABASE_URL.
+ */
 
-const connection = createConnection({
-    type: 'mysql', // Set the database type
-    host: 'localhost', // Database host
-    port: 3306, // Database port
-    username: 'your_username', // Database username
-    password: 'your_password', // Database password
-    database: 'your_database_name', // Database name
-    entities: [User],
-    synchronize: true,
-});
+import { Pool, PoolClient } from 'pg';
 
-export default connection;
+let pool: Pool | null = null;
+
+export function getPool(): Pool {
+  if (!pool) {
+    const databaseUrl = process.env.DATABASE_URL;
+    if (!databaseUrl) {
+      throw new Error(
+        'Missing required environment variable: DATABASE_URL. ' +
+        'Application cannot start without a valid PostgreSQL connection string.',
+      );
+    }
+
+    pool = new Pool({
+      connectionString: databaseUrl,
+      max: Number(process.env.DB_POOL_MAX) || 10,
+      idleTimeoutMillis: 30_000,
+      connectionTimeoutMillis: 5_000,
+      ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: true } : undefined,
+    });
+
+    pool.on('error', (err: Error) => {
+      console.error(JSON.stringify({ level: 'error', message: 'Unexpected idle client error', error: err.message }));
+    });
+  }
+  return pool;
+}
+
+export async function checkDatabaseConnection(): Promise<boolean> {
+  let client: PoolClient | null = null;
+  try {
+    client = await getPool().connect();
+    await client.query('SELECT 1');
+    return true;
+  } catch {
+    return false;
+  } finally {
+    client?.release();
+  }
+}
+
+export async function closePool(): Promise<void> {
+  if (pool) {
+    await pool.end();
+    pool = null;
+  }
+}
+
+export default { getPool, checkDatabaseConnection, closePool };

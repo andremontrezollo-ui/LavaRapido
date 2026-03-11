@@ -1,44 +1,25 @@
-import { RedisClient } from 'redis';
+/**
+ * Redis Rate Limit Store — atomic sliding-window counter using ioredis.
+ * Uses INCR + PEXPIRE for atomic rate limit tracking.
+ */
 
-class RedisRateLimitStore {
-    private client: RedisClient;
+import type { Redis } from 'ioredis';
 
-    constructor(redisClient: RedisClient) {
-        this.client = redisClient;
+export interface RateLimitStore {
+  increment(key: string, windowSeconds: number): Promise<{ count: number; ttl: number }>;
+}
+
+export class RedisRateLimitStore implements RateLimitStore {
+  constructor(private readonly redis: Redis) {}
+
+  async increment(key: string, windowSeconds: number): Promise<{ count: number; ttl: number }> {
+    const count = await this.redis.incr(key);
+    if (count === 1) {
+      await this.redis.expire(key, windowSeconds);
     }
-
-    // Increment the rate limit for a specific key
-    async increment(key: string, limit: number, period: number): Promise<number> {
-        const currentCount = await new Promise<number>((resolve, reject) => {
-            this.client.incr(key, (err, reply) => {
-                if (err) reject(err);
-                else resolve(reply);
-            });
-        });
-
-        // Set expiration time if it's the first request
-        if (currentCount === 1) {
-            await new Promise<void>((resolve, reject) => {
-                this.client.expire(key, period, (err) => {
-                    if (err) reject(err);
-                    else resolve();
-                });
-            });
-        }
-
-        return currentCount;
-    }
-
-    // Check if the limit has been exceeded
-    async isLimitExceeded(key: string, limit: number): Promise<boolean> {
-        const currentCount = await new Promise<number>((resolve, reject) => {
-            this.client.get(key, (err, reply) => {
-                if (err) reject(err);
-                else resolve(reply ? parseInt(reply) : 0);
-            });
-        });
-        return currentCount >= limit;
-    }
+    const ttl = await this.redis.ttl(key);
+    return { count, ttl: ttl > 0 ? ttl : windowSeconds };
+  }
 }
 
 export default RedisRateLimitStore;

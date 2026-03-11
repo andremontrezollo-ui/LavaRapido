@@ -1,0 +1,86 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main, 'copilot/**']
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+
+jobs:
+  build-and-test:
+    name: Build, Type-check & Test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: lavarapido
+          POSTGRES_PASSWORD: lavarapido
+          POSTGRES_DB: lavarapido_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://lavarapido:lavarapido@localhost:5432/lavarapido_test
+      REDIS_URL: redis://localhost:6379
+      APP_ENV: test
+      NODE_ENV: test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Type-check
+        working-directory: backend
+        run: npx tsc --noEmit
+
+      - name: Run migrations
+        working-directory: backend
+        run: |
+          for f in src/infra/database/migrations/*.sql; do
+            echo "Applying migration: $f"
+            PGPASSWORD=lavarapido psql -h localhost -U lavarapido -d lavarapido_test -f "$f"
+          done
+
+      - name: Run unit tests
+        working-directory: backend
+        run: npm test
+
+      - name: Security audit
+        working-directory: backend
+        run: npm audit --audit-level=high || true
