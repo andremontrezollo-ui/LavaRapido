@@ -1,0 +1,36 @@
+graph TD
+    EventFailed["Event Handler Failed"]
+    RetryBackoff["Retry with Exponential Backoff\n(attempt 1, 2, 3)"]
+    MaxRetries{"Max Retries\nExceeded?"}
+    DLQ["Dead Letter Queue"]
+    ManualIntervention["Manual Intervention\n(retryDeadLetter)"]
+    Replayed["Event Re-dispatched\nto Handlers"]
+
+    SagaFailed["Saga Step Failed"]
+    Compensating["Compensating\n(reverse order)"]
+    CompensationSuccess{"Compensation\nSucceeded?"}
+    Compensated["Saga Compensated\n(state = compensated)"]
+    SagaFailed2["Saga Failed\n(state = failed)"]
+
+    OutboxFailed["Outbox Publish Failed"]
+    OutboxRetry["Outbox markFailed\n(retryCount++)"]
+    OutboxDLQ{"retryCount >= 5?"}
+    OutboxDeadLetter["Outbox Dead Letter\n(status = dead_letter)"]
+    OutboxRepublish["Republish on Next Poll"]
+
+    EventFailed --> RetryBackoff
+    RetryBackoff --> MaxRetries
+    MaxRetries -->|"No"| RetryBackoff
+    MaxRetries -->|"Yes"| DLQ
+    DLQ --> ManualIntervention
+    ManualIntervention --> Replayed
+
+    SagaFailed --> Compensating
+    Compensating --> CompensationSuccess
+    CompensationSuccess -->|"Yes"| Compensated
+    CompensationSuccess -->|"No"| SagaFailed2
+
+    OutboxFailed --> OutboxRetry
+    OutboxRetry --> OutboxDLQ
+    OutboxDLQ -->|"No"| OutboxRepublish
+    OutboxDLQ -->|"Yes"| OutboxDeadLetter

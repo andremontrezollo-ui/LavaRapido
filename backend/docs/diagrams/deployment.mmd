@@ -1,0 +1,20 @@
+graph TD
+    Client["Client / Webhook"]
+    API["API Layer\n(Express.js :3000)"]
+    EventBus["ResilientEventBus\n(In-Process)"]
+    OutboxProcessor["OutboxProcessor\n(Background Poll)"]
+    PostgreSQL["PostgreSQL / Supabase\n(Module Repositories)"]
+    Redis["Redis\n(Rate Limiting)"]
+    Scheduler["SecureJobScheduler\n(Background Poll)"]
+    DLQ["Dead Letter Queue\n(In-Memory)"]
+
+    Client -->|"HTTPS"| API
+    API -->|"Publish Event"| EventBus
+    API -->|"Write"| PostgreSQL
+    EventBus -->|"Dispatch"| OutboxProcessor
+    OutboxProcessor -->|"Poll + Publish"| EventBus
+    OutboxProcessor -->|"Persist Messages"| PostgreSQL
+    Scheduler -->|"Poll Due Jobs"| PostgreSQL
+    Scheduler -->|"Acquire Lock"| Redis
+    EventBus -->|"Rate Limit"| Redis
+    EventBus -->|"Max Retries"| DLQ

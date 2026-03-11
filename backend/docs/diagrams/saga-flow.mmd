@@ -1,0 +1,29 @@
+stateDiagram-v2
+    [*] --> DepositDetected : blockchain-monitor publishes DEPOSIT_DETECTED
+
+    DepositDetected --> DepositConfirmed : confirmations >= threshold\nDEPOSIT_CONFIRMED published
+
+    DepositConfirmed --> SagaStarted : SagaOrchestrator.execute()
+
+    SagaStarted --> ConfirmDepositStep : Step 1 - confirm_deposit
+    ConfirmDepositStep --> LiquidityReservationStep : Step 2 - reserve_liquidity
+
+    LiquidityReservationStep --> PaymentSchedulingStep : Step 3 - schedule_payments
+    PaymentSchedulingStep --> SagaCompleted : all steps succeeded
+
+    SagaCompleted --> PaymentDue : SecureJobScheduler polls due payments
+    PaymentDue --> PaymentExecuted : PAYMENT_EXECUTED published
+    PaymentExecuted --> [*]
+
+    ConfirmDepositStep --> Compensating : Step 1 failed
+    LiquidityReservationStep --> Compensating : Step 2 failed
+    PaymentSchedulingStep --> Compensating : Step 3 failed
+
+    Compensating --> CompensateReserveLiquidity : compensate reserve_liquidity
+    CompensateReserveLiquidity --> CompensateConfirmDeposit : compensate confirm_deposit
+    CompensateConfirmDeposit --> Compensated
+
+    Compensating --> Failed : compensation itself failed
+
+    Compensated --> [*]
+    Failed --> [*]
