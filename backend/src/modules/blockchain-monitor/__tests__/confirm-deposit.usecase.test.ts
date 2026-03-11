@@ -5,6 +5,7 @@ import { ObservedTransaction } from '../domain/entities/observed-transaction.ent
 import { TxId } from '../domain/value-objects/txid.vo';
 import { ConfirmationCount } from '../domain/value-objects/confirmation-count.vo';
 import { BlockHeight } from '../domain/value-objects/block-height.vo';
+import { InMemoryIdempotencyStore } from '../../../infra/persistence/idempotency.store';
 
 describe('ConfirmDepositUseCase', () => {
   const txHash = 'a'.repeat(64);
@@ -23,7 +24,7 @@ describe('ConfirmDepositUseCase', () => {
     const publisher = { publish: async (e: any) => { events.push(e); } };
     const clock = { now: () => new Date() };
 
-    const uc = new ConfirmDepositUseCase(repo, publisher, clock);
+    const uc = new ConfirmDepositUseCase(repo, publisher, clock, new InMemoryIdempotencyStore());
     const result = await uc.execute(txHash, 6);
 
     expect(result.isConfirmed).toBe(true);
@@ -37,7 +38,7 @@ describe('ConfirmDepositUseCase', () => {
     const publisher = { publish: async (e: any) => { events.push(e); } };
     const clock = { now: () => new Date() };
 
-    const uc = new ConfirmDepositUseCase(repo, publisher, clock);
+    const uc = new ConfirmDepositUseCase(repo, publisher, clock, new InMemoryIdempotencyStore());
     const result = await uc.execute(txHash, 2);
 
     expect(result.isConfirmed).toBe(false);

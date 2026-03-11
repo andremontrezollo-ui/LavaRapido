@@ -1,42 +1,21 @@
-import { RedisClient } from 'redis';
+import type Redis from 'ioredis';
 
-class RedisRateLimitStore {
-    private client: RedisClient;
+export class RedisRateLimitStore {
+    constructor(private readonly client: Redis) {}
 
-    constructor(redisClient: RedisClient) {
-        this.client = redisClient;
-    }
-
-    // Increment the rate limit for a specific key
     async increment(key: string, limit: number, period: number): Promise<number> {
-        const currentCount = await new Promise<number>((resolve, reject) => {
-            this.client.incr(key, (err, reply) => {
-                if (err) reject(err);
-                else resolve(reply);
-            });
-        });
+        const currentCount = await this.client.incr(key);
 
-        // Set expiration time if it's the first request
         if (currentCount === 1) {
-            await new Promise<void>((resolve, reject) => {
-                this.client.expire(key, period, (err) => {
-                    if (err) reject(err);
-                    else resolve();
-                });
-            });
+            await this.client.expire(key, period);
         }
 
         return currentCount;
     }
 
-    // Check if the limit has been exceeded
     async isLimitExceeded(key: string, limit: number): Promise<boolean> {
-        const currentCount = await new Promise<number>((resolve, reject) => {
-            this.client.get(key, (err, reply) => {
-                if (err) reject(err);
-                else resolve(reply ? parseInt(reply) : 0);
-            });
-        });
+        const value = await this.client.get(key);
+        const currentCount = value ? parseInt(value, 10) : 0;
         return currentCount >= limit;
     }
 }
