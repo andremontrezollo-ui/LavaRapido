@@ -14,7 +14,7 @@ import { DestinationReference } from '../../domain/value-objects/destination-ref
 import { ExecutionTime } from '../../domain/value-objects/execution-time.vo';
 import { PaymentDelayPolicy } from '../../domain/policies/payment-delay.policy';
 import { createPaymentScheduledEvent } from '../../domain/events/payment-scheduled.event';
-import { IdempotencyGuard } from '../../../../shared/policies/idempotency-policy';
+import { IdempotencyGuard, InMemoryIdempotencyStore } from '../../../../shared/policies/idempotency-policy';
 
 export class SchedulePaymentUseCase {
   private readonly delayPolicy = new PaymentDelayPolicy();
@@ -25,7 +25,7 @@ export class SchedulePaymentUseCase {
     private readonly publisher: PaymentEventPublisher,
     private readonly clock: PaymentClock,
     private readonly idGenerator: { generate(): string },
-    idempotencyStore: IdempotencyStore,
+    idempotencyStore: IdempotencyStore = new InMemoryIdempotencyStore(),
   ) {
     this.idempotencyGuard = new IdempotencyGuard(idempotencyStore, 3600);
   }

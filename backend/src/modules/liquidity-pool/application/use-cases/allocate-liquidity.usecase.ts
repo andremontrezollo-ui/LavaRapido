@@ -10,7 +10,7 @@ import type { IdempotencyStore } from '../../../../shared/policies/idempotency-p
 import { Amount } from '../../domain/value-objects/amount.vo';
 import { AllocationPolicy } from '../../domain/policies/allocation-policy';
 import { createLiquidityAllocatedEvent } from '../../domain/events/liquidity-allocated.event';
-import { IdempotencyGuard } from '../../../../shared/policies/idempotency-policy';
+import { IdempotencyGuard, InMemoryIdempotencyStore } from '../../../../shared/policies/idempotency-policy';
 
 export class AllocateLiquidityUseCase {
   private readonly policy = new AllocationPolicy();
@@ -20,7 +20,7 @@ export class AllocateLiquidityUseCase {
     private readonly poolRepo: LiquidityPoolRepository,
     private readonly publisher: PoolEventPublisher,
     private readonly clock: PoolClock,
-    idempotencyStore: IdempotencyStore,
+    idempotencyStore: IdempotencyStore = new InMemoryIdempotencyStore(),
   ) {
     this.idempotencyGuard = new IdempotencyGuard(idempotencyStore, 3600);
   }
