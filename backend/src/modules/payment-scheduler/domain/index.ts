@@ -1,87 +1,38 @@
 /**
  * Payment Scheduler - Domain Layer
- * 
- * Scheduling policies, time windows, and batch management.
+ *
+ * Canonical exports: entities, value objects, events, policies, errors.
  */
 
+// Entities
+export { ScheduledPayment } from './entities/scheduled-payment.entity';
+export type { PaymentStatus } from './entities/scheduled-payment.entity';
+export { PaymentOrder } from './entities/payment-order.entity';
+export { PaymentWindow } from './entities/payment-window.entity';
+
 // Value Objects
-export interface TimeWindow {
-  readonly startTime: Date;
-  readonly endTime: Date;
-  readonly durationSeconds: number;
-}
+export { ScheduledPaymentId } from './value-objects/scheduled-payment-id.vo';
+export { DestinationReference } from './value-objects/destination-reference.vo';
+export { ExecutionTime } from './value-objects/execution-time.vo';
 
-export interface SchedulingPolicy {
-  readonly type: 'immediate' | 'delayed' | 'random-window';
-  readonly minDelaySeconds?: number;
-  readonly maxDelaySeconds?: number;
-  readonly batchSize?: number;
-}
+// Events
+export type { PaymentScheduledEvent } from './events/payment-scheduled.event';
+export { createPaymentScheduledEvent } from './events/payment-scheduled.event';
+export type { PaymentDueEvent } from './events/payment-due.event';
+export { createPaymentDueEvent } from './events/payment-due.event';
+export type { PaymentExecutedEvent } from './events/payment-executed.event';
+export { createPaymentExecutedEvent } from './events/payment-executed.event';
+export type { PaymentCancelledEvent } from './events/payment-cancelled.event';
+export { createPaymentCancelledEvent } from './events/payment-cancelled.event';
 
-export interface PaymentBatch {
-  readonly id: string;
-  readonly payments: ScheduledPayment[];
-  readonly window: TimeWindow;
-  readonly status: 'pending' | 'processing' | 'completed' | 'failed';
-}
+// Policies
+export { PaymentDelayPolicy } from './policies/payment-delay.policy';
+export { ExecutionEligibilityPolicy } from './policies/execution-eligibility.policy';
+export { SchedulingWindowPolicy } from './policies/scheduling-window.policy';
+export { RateLimitPolicy } from './policies/RateLimitPolicy';
+export type { RateLimitInput, RateLimitResult } from './policies/RateLimitPolicy';
 
-export interface ScheduledPayment {
-  readonly id: string;
-  readonly amount: number;
-  readonly scheduledFor: Date;
-  readonly status: 'queued' | 'processing' | 'completed' | 'failed';
-  readonly retryCount: number;
-}
-
-// Domain Events
-export interface PaymentPlannedEvent {
-  readonly type: 'PAYMENT_PLANNED';
-  readonly paymentId: string;
-  readonly scheduledFor: Date;
-  readonly windowStart: Date;
-  readonly windowEnd: Date;
-  readonly timestamp: Date;
-}
-
-export interface PaymentBatchCreatedEvent {
-  readonly type: 'PAYMENT_BATCH_CREATED';
-  readonly batchId: string;
-  readonly paymentCount: number;
-  readonly window: TimeWindow;
-  readonly timestamp: Date;
-}
-
-export interface PaymentExecutedEvent {
-  readonly type: 'PAYMENT_EXECUTED';
-  readonly paymentId: string;
-  readonly batchId?: string;
-  readonly success: boolean;
-  readonly timestamp: Date;
-}
-
-export type SchedulerEvent = 
-  | PaymentPlannedEvent 
-  | PaymentBatchCreatedEvent 
-  | PaymentExecutedEvent;
-
-// Factory Functions
-export function createTimeWindow(
-  startTime: Date,
-  durationSeconds: number
-): TimeWindow {
-  return {
-    startTime,
-    endTime: new Date(startTime.getTime() + durationSeconds * 1000),
-    durationSeconds,
-  };
-}
-
-export function calculateRandomDelay(
-  minSeconds: number,
-  maxSeconds: number
-): number {
-  const range = maxSeconds - minSeconds;
-  const randomBytes = new Uint32Array(1);
-  crypto.getRandomValues(randomBytes);
-  return minSeconds + (randomBytes[0] % range);
-}
+// Errors
+export { PaymentAlreadyExecutedError } from './errors/payment-already-executed.error';
+export { PaymentNotDueError } from './errors/payment-not-due.error';
+export { InvalidScheduleWindowError } from './errors/invalid-schedule-window.error';

@@ -1,2 +1,7 @@
-export { createDepositSagaSteps } from './deposit-processing.saga';
-export type { DepositSagaContext, DepositSagaDependencies } from './deposit-processing.saga';
+export { createDepositSagaSteps, defaultSagaJitterProvider } from './deposit-processing.saga';
+export type {
+  DepositSagaContext,
+  DepositSagaDependencies,
+  DepositSagaStepName,
+  SagaJitterProvider,
+} from './deposit-processing.saga';

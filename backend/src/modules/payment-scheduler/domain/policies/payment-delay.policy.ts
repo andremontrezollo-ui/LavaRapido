@@ -10,15 +10,29 @@ interface DelayResult {
   jitterSeconds: number;
 }
 
+/**
+ * JitterProvider abstracts randomness so the policy is deterministically testable.
+ * Default implementation uses Math.random(); inject a fixed provider in tests.
+ */
+export interface JitterProvider {
+  nextInt(max: number): number;
+}
+
+export const defaultJitterProvider: JitterProvider = {
+  nextInt: (max: number) => Math.floor(Math.random() * max),
+};
+
 export class PaymentDelayPolicy implements ExplainablePolicy<DelayInput, DelayResult> {
   private readonly minDelay = 300;      // 5 min
   private readonly maxDelay = 86400;    // 24 hours
   private readonly maxJitter = 600;     // 10 min
 
+  constructor(private readonly jitter: JitterProvider = defaultJitterProvider) {}
+
   evaluate(input: DelayInput): DelayResult {
     const clamped = Math.max(this.minDelay, Math.min(this.maxDelay, input.requestedDelaySeconds));
-    const jitter = Math.floor(Math.random() * this.maxJitter);
-    return { actualDelaySeconds: clamped + jitter, jitterSeconds: jitter };
+    const jitterSeconds = this.jitter.nextInt(this.maxJitter);
+    return { actualDelaySeconds: clamped + jitterSeconds, jitterSeconds };
   }
 
   explain(input: DelayInput): string {
