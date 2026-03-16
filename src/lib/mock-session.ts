@@ -44,6 +44,8 @@ export function generateSessionId(): string {
 
 export interface MixSession {
   sessionId: string;
+  /** Opaque token for status lookups — never the internal UUID. */
+  statusToken: string;
   depositAddress: string;
   createdAt: Date;
   expiresAt: Date;

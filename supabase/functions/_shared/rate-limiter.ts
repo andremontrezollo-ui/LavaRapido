@@ -1,5 +1,9 @@
 /**
  * Reusable Rate Limiter for Edge Functions
+ *
+ * Uses HMAC-SHA256 with a server secret (RATE_LIMIT_HMAC_SECRET env var)
+ * to pseudonymise IP addresses before storing them.
+ * Falls back to a plain SHA-256 if the secret is not configured (with a warning).
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -50,10 +54,31 @@ export async function recordRateLimit(
   await supabase.from("rate_limits").insert({ ip_hash: ipHash, endpoint });
 }
 
-export async function hashString(input: string): Promise<string> {
+/**
+ * Derives a pseudonymous hash from an IP address.
+ * Uses HMAC-SHA256 with RATE_LIMIT_HMAC_SECRET when available,
+ * otherwise falls back to plain SHA-256 (less secure — configure the secret).
+ */
+export async function hashIp(ip: string): Promise<string> {
+  const secret = Deno.env.get("RATE_LIMIT_HMAC_SECRET");
   const encoder = new TextEncoder();
-  const data = encoder.encode(input);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+
+  if (secret) {
+    const key = await crypto.subtle.importKey(
+      "raw",
+      encoder.encode(secret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+    const sig = await crypto.subtle.sign("HMAC", key, encoder.encode(ip));
+    return Array.from(new Uint8Array(sig))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+  }
+
+  // Fallback: plain SHA-256 (less private — set RATE_LIMIT_HMAC_SECRET in env)
+  const hashBuffer = await crypto.subtle.digest("SHA-256", encoder.encode(ip));
   return Array.from(new Uint8Array(hashBuffer))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");

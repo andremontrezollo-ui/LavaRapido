@@ -5,18 +5,18 @@ import { Button } from "@/components/ui/button";
 const steps = [
   {
     icon: Shield,
-    title: "Send",
-    description: "Transfer BTC to a unique address generated for you",
+    title: "Configure",
+    description: "Set up simulated destination addresses and delay parameters",
   },
   {
     icon: Shuffle,
-    title: "Process",
-    description: "Funds are dissociated through our system",
+    title: "Simulate",
+    description: "A mock session is created demonstrating the dissociation concept",
   },
   {
     icon: Clock,
-    title: "Receive",
-    description: "Receive at new addresses with configurable delay",
+    title: "Explore",
+    description: "Inspect the simulated result and prototype flow",
   },
 ];
 
@@ -31,31 +31,37 @@ export function HeroSection() {
 
       <div className="container relative mx-auto px-4 py-20">
         <div className="max-w-4xl mx-auto text-center">
+          {/* Demo badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-warning/10 border border-warning/20 text-warning text-sm font-medium mb-4 animate-fade-up">
+            <Shield className="h-4 w-4" />
+            <span>Educational simulator — no real funds</span>
+          </div>
+
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium mb-8 animate-fade-up">
             <Shield className="h-4 w-4" />
-            <span>Privacy for Bitcoin transactions</span>
+            <span>Conceptual prototype of Bitcoin transaction privacy</span>
           </div>
 
           {/* Headline */}
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-heading font-bold mb-6 animate-fade-up animation-delay-100">
-            Origin and destination{" "}
-            <span className="gradient-text">dissociation</span>
+            Privacy concept{" "}
+            <span className="gradient-text">simulator</span>
             <br />
-            for your transactions
+            for Bitcoin transactions
           </h1>
 
           {/* Subheadline */}
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed animate-fade-up animation-delay-200">
-            A mixing service that breaks the traceability between your Bitcoin addresses,
-            offering an additional layer of financial privacy.
+            An educational prototype that illustrates how address dissociation could work —
+            for learning and conceptual exploration only. No real transactions are performed.
           </p>
 
           {/* CTA */}
           <div className="flex items-center justify-center mb-16 animate-fade-up animation-delay-300">
             <Button variant="hero" size="xl" asChild>
               <Link to="/mixing">
-                Start operation
+                Try the simulator
                 <ArrowRight className="h-5 w-5" />
               </Link>
             </Button>

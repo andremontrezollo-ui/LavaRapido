@@ -11,72 +11,72 @@ import { ArrowRight, HelpCircle } from "lucide-react";
 
 const faqCategories = [
   {
-    title: "General Operation",
+    title: "General — About the Simulator",
     items: [
       {
-        question: "What is a Bitcoin mixing service?",
+        question: "What is this application?",
         answer:
-          "A Bitcoin mixer breaks the direct link between the origin address and the destination address of a transaction. This is done by mixing your funds with those of other users in a shared pool, making it much harder to trace the origin of funds.",
+          "This is an educational prototype / conceptual simulator that illustrates how Bitcoin address dissociation could work in theory. It does not perform real transactions, does not connect to any blockchain, and does not move funds. It exists purely for learning and exploration.",
       },
       {
-        question: "Are my funds safe during the process?",
+        question: "Are any real funds used during the demonstration?",
         answer:
-          "During the process, your funds pass through our liquidity pool. We don't offer absolute guarantees, but we operate with rigorous security practices. We recommend starting with smaller amounts to test the service before larger operations.",
+          "No. All addresses shown are mock testnet addresses and are not valid on Bitcoin mainnet. No real BTC is involved at any point. Do not send real funds to any address displayed here.",
       },
       {
-        question: "Do I need to register to use the service?",
+        question: "Do I need to register to use the simulator?",
         answer:
-          "No. We operate without the need for registration, email, or any personal information. You configure the operation, send the funds, and receive at the configured destinations.",
+          "No. The simulator requires no registration, email, or personal information. You configure a simulated session and explore the conceptual flow.",
       },
       {
-        question: "What is the minimum amount for mixing?",
+        question: "What is the minimum amount for a simulation?",
         answer:
-          "The recommended minimum is 0.001 BTC. Smaller amounts may not be processed due to network fee costs that would make the operation unfeasible.",
+          "There is no minimum — no real funds are used. The amount fields are illustrative only, designed to show how a real implementation might look.",
       },
     ],
   },
   {
-    title: "Processing Time",
+    title: "Simulation Flow",
     items: [
       {
-        question: "How long does it take to process my operation?",
+        question: "What happens when I confirm a session?",
         answer:
-          "The total time depends on three factors: blockchain confirmations (typically 1-2 for inputs), the delay configured by you (0-24 hours), and the execution of outputs. The minimum time is about 30 minutes, but it can be significantly longer with configured delays.",
+          "A simulated session record is created in the backend with a mock testnet deposit address and a 30-minute TTL. This demonstrates the session lifecycle concept. No real blockchain interaction occurs.",
       },
       {
-        question: "Why should I use longer delays?",
+        question: "Why are there configurable delays?",
         answer:
-          "Longer delays increase the temporal dissociation between your input and output. This makes it harder for analyses that try to correlate transactions by timing. We recommend at least 2 hours for greater privacy.",
+          "The delay parameter illustrates how temporal dissociation could be applied between an input and output in a real implementation. In this simulator, it is stored as metadata only.",
       },
       {
-        question: "What happens if the network is congested?",
+        question: "What happens after the session expires?",
         answer:
-          "Congestion on the Bitcoin network can delay confirmations. In that case, the entire process may take longer. We have no control over blockchain confirmation times.",
+          "The session is marked as expired and cleaned up automatically. Demo data is deleted within 24 hours as part of the data minimisation policy.",
       },
     ],
   },
   {
-    title: "Limitations and Risks",
+    title: "Limitations and Scope",
     items: [
       {
-        question: "Does mixing guarantee total anonymity?",
+        question: "Does this simulator provide any real privacy?",
         answer:
-          "No. No mixing service can guarantee absolute anonymity. We offer an additional layer of privacy that significantly hinders tracking, but sophisticated analyses may, in some cases, make correlations. Use as part of a larger privacy strategy.",
+          "No. This is a conceptual prototype only. No mixing, obfuscation, or on-chain privacy is implemented or implied. The simulator does not interact with any real Bitcoin network.",
       },
       {
-        question: "Can I cancel an operation after sending funds?",
+        question: "Can I use this for real Bitcoin privacy purposes?",
         answer:
-          "No. Once funds are sent to our deposit address and confirmed on the blockchain, the operation is irreversible. That's why it's crucial to verify all destination addresses before confirming.",
+          "No. This is strictly an educational demo. It has no production-grade privacy guarantees and should never be used for real financial operations.",
       },
       {
-        question: "What if I send to the wrong address?",
+        question: "What data is stored?",
         answer:
-          "Bitcoin transactions are irreversible. If you send funds to an incorrect address (ours or any other), there's no way to recover them. Always double-check before sending.",
+          "Only minimal session metadata is stored: a mock deposit address, session status, creation/expiry timestamps, and a pseudonymised IP hash for rate limiting. All data is automatically deleted within 24 hours.",
       },
       {
-        question: "Do you store operation data?",
+        question: "Are real destination addresses stored?",
         answer:
-          "We maintain minimal logs necessary for service operation. These are automatically eliminated after a short period. We don't store associations between inputs and outputs after the operation is complete.",
+          "The addresses entered in the simulator UI are for demonstration only. The backend currently stores only the simulated deposit address; destination address configuration is a UI-only feature in this demo.",
       },
     ],
   },
@@ -84,19 +84,19 @@ const faqCategories = [
     title: "Safe Usage",
     items: [
       {
-        question: "What best practices should I follow?",
+        question: "What should I keep in mind while exploring?",
         answer:
-          "Use privacy-focused browsers (Tor), avoid reusing Bitcoin addresses, use longer delays, split large operations into smaller ones, and never share details of your operations.",
+          "Remember that this is purely educational. No real privacy is provided, no real funds are involved, and the addresses shown are testnet mocks. Treat this as a learning tool, not a financial service.",
       },
       {
-        question: "Should I use Tor to access the service?",
+        question: "Can multiple destination addresses be configured?",
         answer:
-          "We strongly recommend it. Using Tor prevents your internet provider or network observers from knowing that you're accessing a mixing service.",
+          "Yes, the UI supports up to 5 simulated destination addresses with custom percentage splits — demonstrating what a multi-output configuration would look like.",
       },
       {
-        question: "Can I use multiple destination addresses?",
+        question: "Where can I learn more about Bitcoin privacy?",
         answer:
-          "Yes, you can configure up to 5 destination addresses with custom percentages. This adds an extra layer of privacy by fragmenting the output values.",
+          "For real Bitcoin privacy research, refer to academic literature on CoinJoin, PayJoin, and Lightning Network. This simulator is not affiliated with any of those technologies.",
       },
     ],
   },
@@ -119,7 +119,7 @@ export default function FAQ() {
             FAQ
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
-            Answers to the most common questions about our mixing service
+            Answers to the most common questions about this educational simulator
           </p>
         </div>
       </section>
@@ -176,7 +176,7 @@ export default function FAQ() {
               </Link>
             </Button>
             <Button variant="outline" size="lg" asChild>
-              <Link to="/mixing">Start Mixing</Link>
+              <Link to="/mixing">Try Simulator</Link>
             </Button>
           </div>
         </div>

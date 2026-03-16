@@ -14,48 +14,48 @@ const flowSteps = [
   {
     icon: Wallet,
     step: "01",
-    title: "Fund Entry",
-    description: "You send Bitcoin to a unique address generated exclusively for your operation. This address is never reused.",
+    title: "Session Setup (Simulated)",
+    description: "The simulator generates a unique mock testnet address for your demonstration session. This address is not valid on mainnet and no real funds should be sent.",
     details: [
-      "Address generated on demand",
-      "Automatic confirmation monitoring",
-      "No association with previous operations",
+      "Mock address generated on demand",
+      "Session expires after 30 minutes",
+      "No real blockchain connectivity",
     ],
     color: "primary",
   },
   {
     icon: Shuffle,
-    step: "02", 
-    title: "Processing",
-    description: "Your funds enter our liquidity pool, where they are structurally dissociated from their origin.",
+    step: "02",
+    title: "Conceptual Processing",
+    description: "This step illustrates how funds would conceptually enter a dissociation pool. In this simulator, no actual mixing occurs — it demonstrates what the interface would look like.",
     details: [
-      "Shared pool from multiple users",
-      "Temporal correlation breaking",
-      "Value fragmentation",
+      "Conceptual pool illustration",
+      "Temporal correlation concept",
+      "Value fragmentation demonstration",
     ],
     color: "accent",
   },
   {
     icon: Clock,
     step: "03",
-    title: "Temporal Distribution",
-    description: "Outputs are scheduled with variable delays, eliminating direct temporal correlation with the input.",
+    title: "Delay Configuration (Demo)",
+    description: "The configurable delay parameter shows how temporal separation could be applied. In this prototype, the delay is stored as session metadata only.",
     details: [
-      "User-configurable delays",
-      "Randomized time windows",
-      "Multiple output transactions",
+      "User-configurable delay parameter",
+      "Illustrative time-window concept",
+      "Not executed on any blockchain",
     ],
     color: "primary",
   },
   {
     icon: CheckCircle2,
     step: "04",
-    title: "Receipt",
-    description: "You receive the funds at your destination addresses, with fragmented values and no traceable link to the origin.",
+    title: "Result Exploration",
+    description: "The session summary shows what a real implementation's output would look like. No funds are received — this is a conceptual walkthrough only.",
     details: [
-      "Multiple destination addresses",
-      "Values distributed per configuration",
-      "Independent transactions",
+      "Multiple destination address support",
+      "Percentage-based split configuration",
+      "All data is simulated — demo only",
     ],
     color: "success",
   },
@@ -71,10 +71,10 @@ export default function HowItWorks() {
         
         <div className="container relative mx-auto px-4 text-center">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-heading font-bold mb-6">
-            How <span className="gradient-text">mixing</span> works
+            How the <span className="gradient-text">simulator</span> works
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
-            Understand the fund dissociation process in 4 simple steps
+            A conceptual walkthrough of the address dissociation prototype in 4 steps
           </p>
         </div>
       </section>
@@ -129,7 +129,7 @@ export default function HowItWorks() {
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             <h2 className="text-2xl md:text-3xl font-heading font-bold text-center mb-12">
-              Simplified <span className="gradient-text">diagram</span>
+              Conceptual <span className="gradient-text">diagram</span>
             </h2>
 
             <div className="glass-card p-8 md:p-12">
@@ -183,15 +183,15 @@ export default function HowItWorks() {
       <section className="py-20">
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-2xl md:text-3xl font-heading font-bold mb-4">
-            Ready to start?
+            Ready to explore?
           </h2>
           <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
-            Configure your mixing operation in just a few minutes
+            Try the conceptual simulator — no real funds required
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button variant="hero" size="lg" asChild>
               <Link to="/mixing">
-                Start Mixing
+                Try Simulator
                 <ArrowRight className="h-5 w-5" />
               </Link>
             </Button>

@@ -12,6 +12,16 @@ dist
 dist-ssr
 *.local
 
+# Environment variables — never commit real secrets
+.env
+.env.local
+.env.production
+.env.staging
+
+# Lock files — project uses npm (package-lock.json); bun lockfiles are excluded
+bun.lock
+bun.lockb
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
