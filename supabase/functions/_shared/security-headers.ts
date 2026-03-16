@@ -29,19 +29,15 @@ function getCorsHeaders(requestOrigin?: string | null): Record<string, string> {
     .map((s) => s.trim())
     .filter(Boolean);
 
-  const origin =
-    requestOrigin && allowedList.includes(requestOrigin)
-      ? requestOrigin
-      : allowedList[0] ?? "";
-
   const headers: Record<string, string> = {
     "Access-Control-Allow-Headers":
       "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   };
 
-  if (origin) {
-    headers["Access-Control-Allow-Origin"] = origin;
+  // Only set Allow-Origin if the request origin is explicitly in the allowlist
+  if (requestOrigin && allowedList.includes(requestOrigin)) {
+    headers["Access-Control-Allow-Origin"] = requestOrigin;
     headers["Vary"] = "Origin";
   }
 
