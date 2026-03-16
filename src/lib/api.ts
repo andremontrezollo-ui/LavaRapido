@@ -3,8 +3,8 @@
  * Standardized /api/v1 pattern via Edge Functions
  */
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 
 export interface ApiErrorDetail {
   code: string;
@@ -34,7 +34,6 @@ async function callFunction<T>(functionName: string, body?: unknown, method: "PO
     const json = await res.json();
 
     if (!res.ok) {
-      // Handle standardized error format
       const errorDetail: ApiErrorDetail = json.error?.code
         ? json.error
         : { code: "UNKNOWN_ERROR", message: json.error || "Unknown error" };
@@ -53,7 +52,10 @@ async function callFunction<T>(functionName: string, body?: unknown, method: "PO
 // --- Mix Sessions ---
 
 export interface MixSessionResponse {
+  /** Internal UUID — for display only; do not use for status lookups. */
   sessionId: string;
+  /** Opaque token for status lookups via getMixSessionStatus(). */
+  statusToken: string;
   depositAddress: string;
   createdAt: string;
   expiresAt: string;
@@ -61,7 +63,6 @@ export interface MixSessionResponse {
 }
 
 export interface SessionStatusResponse {
-  sessionId: string;
   status: string;
   expiresAt: string;
   createdAt: string;
@@ -71,8 +72,9 @@ export function createMixSession() {
   return callFunction<MixSessionResponse>("mix-sessions");
 }
 
-export function getMixSessionStatus(sessionId: string) {
-  return callFunction<SessionStatusResponse>("mix-session-status", { sessionId });
+/** Look up session status using the opaque statusToken (never the internal UUID). */
+export function getMixSessionStatus(statusToken: string) {
+  return callFunction<SessionStatusResponse>("mix-session-status", { statusToken });
 }
 
 // --- Contact ---

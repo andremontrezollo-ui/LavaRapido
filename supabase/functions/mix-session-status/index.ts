@@ -1,7 +1,10 @@
 /**
  * Mix Session Status Lookup
  * POST /functions/v1/mix-session-status
- * Body: { sessionId: "uuid" }
+ * Body: { statusToken: "<64-char hex opaque token>" }
+ *
+ * Accepts only the opaque public_status_token (never the internal UUID).
+ * Returns minimal fields: status and expiry timestamps only.
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -9,10 +12,12 @@ import { jsonResponse, corsResponse } from "../_shared/security-headers.ts";
 import { validationError, notFoundError, internalError, methodNotAllowed } from "../_shared/error-response.ts";
 import { logInfo, logError, generateRequestId } from "../_shared/structured-logger.ts";
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** Opaque status token: 64 hex characters (32 random bytes). */
+const STATUS_TOKEN_RE = /^[0-9a-f]{64}$/i;
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return corsResponse();
+  const requestOrigin = req.headers.get("origin");
+  if (req.method === "OPTIONS") return corsResponse(requestOrigin);
   if (req.method !== "POST") return methodNotAllowed();
 
   const requestId = generateRequestId();
@@ -27,10 +32,10 @@ Deno.serve(async (req) => {
     }
 
     if (!body || typeof body !== "object") return validationError("Invalid request body");
-    const { sessionId } = body as Record<string, unknown>;
+    const { statusToken } = body as Record<string, unknown>;
 
-    if (typeof sessionId !== "string" || !UUID_RE.test(sessionId)) {
-      return validationError("Invalid session ID format. Must be a valid UUID.");
+    if (typeof statusToken !== "string" || !STATUS_TOKEN_RE.test(statusToken)) {
+      return validationError("Invalid status token format.");
     }
 
     const supabase = createClient(
@@ -40,8 +45,8 @@ Deno.serve(async (req) => {
 
     const { data, error } = await supabase
       .from("mix_sessions")
-      .select("id, status, expires_at, created_at")
-      .eq("id", sessionId)
+      .select("status, expires_at, created_at")
+      .eq("public_status_token", statusToken)
       .single();
 
     if (error || !data) {
@@ -58,17 +63,17 @@ Deno.serve(async (req) => {
       await supabase
         .from("mix_sessions")
         .update({ status: "expired" })
-        .eq("id", sessionId);
+        .eq("public_status_token", statusToken);
     }
 
     logInfo("Session status queried", { requestId, endpoint: "mix-session-status", status: 200, latencyMs: Date.now() - startTime });
 
+    // Return minimal fields only — no internal IDs
     return jsonResponse({
-      sessionId: data.id,
       status,
       expiresAt: data.expires_at,
       createdAt: data.created_at,
-    }, 200);
+    }, 200, undefined, requestOrigin);
   } catch (err) {
     logError("Unexpected error", { requestId, endpoint: "mix-session-status", status: 500, latencyMs: Date.now() - startTime });
     return internalError();

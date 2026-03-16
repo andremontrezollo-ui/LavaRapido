@@ -1,7 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { jsonResponse, corsResponse } from "../_shared/security-headers.ts";
 import { validationError, rateLimitError, internalError, methodNotAllowed, errorResponse, ErrorCodes } from "../_shared/error-response.ts";
-import { checkRateLimit, recordRateLimit, hashString } from "../_shared/rate-limiter.ts";
+import { checkRateLimit, recordRateLimit, hashIp } from "../_shared/rate-limiter.ts";
 import { logInfo, logWarn, logError, generateRequestId } from "../_shared/structured-logger.ts";
 
 const VALIDATION = {
@@ -46,7 +46,8 @@ function validatePayload(body: unknown): { valid: true; data: { subject: string;
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return corsResponse();
+  const requestOrigin = req.headers.get("origin");
+  if (req.method === "OPTIONS") return corsResponse(requestOrigin);
   if (req.method !== "POST") return methodNotAllowed();
 
   const requestId = generateRequestId();
@@ -54,7 +55,7 @@ Deno.serve(async (req) => {
 
   try {
     const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-    const ipHash = await hashString(clientIp);
+    const ipHash = await hashIp(clientIp);
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -104,7 +105,7 @@ Deno.serve(async (req) => {
 
     logInfo("Ticket created", { requestId, endpoint: "contact", status: 201, latencyMs: Date.now() - startTime });
 
-    return jsonResponse({ ticketId: data.ticket_id, createdAt: data.created_at }, 201);
+    return jsonResponse({ ticketId: data.ticket_id, createdAt: data.created_at }, 201, undefined, requestOrigin);
   } catch (err) {
     logError("Unexpected error", { requestId, endpoint: "contact", status: 500, latencyMs: Date.now() - startTime });
     return internalError();

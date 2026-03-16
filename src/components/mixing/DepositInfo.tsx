@@ -20,10 +20,10 @@ export function DepositInfo({ session, onNewOperation }: DepositInfoProps) {
         </div>
 
         <h2 className="font-heading font-semibold text-xl mb-2">
-          Operation Configured
+          Demo Session Created
         </h2>
         <p className="text-muted-foreground mb-2">
-          Send Bitcoin to the address below to start mixing
+          This is a simulated session — no real funds are involved
         </p>
 
         {/* Simulator disclaimer */}
@@ -37,8 +37,8 @@ export function DepositInfo({ session, onNewOperation }: DepositInfoProps) {
         {/* Session Info */}
         <div className="mb-4 text-left p-4 rounded-lg bg-secondary/50 space-y-1 text-sm">
           <p className="text-muted-foreground">
-            <span className="font-medium text-foreground">Session:</span>{" "}
-            <code className="font-mono text-xs">{session.sessionId}</code>
+            <span className="font-medium text-foreground">Status token:</span>{" "}
+            <code className="font-mono text-xs break-all">{session.statusToken.slice(0, 16)}…</code>
           </p>
           <p className="text-muted-foreground">
             <span className="font-medium text-foreground">Expires:</span>{" "}
@@ -82,13 +82,11 @@ export function DepositInfo({ session, onNewOperation }: DepositInfoProps) {
 
         <div className="p-4 rounded-lg bg-primary/5 border border-primary/10 text-left">
           <p className="text-sm text-muted-foreground">
-            <strong className="text-foreground">Next steps:</strong>
+            <strong className="text-foreground">⚠️ This is a demo simulator:</strong>
             <br />
-            1. Send any amount of BTC to the address above
+            The address above is a mock testnet address — do NOT send real BTC.
             <br />
-            2. Wait for at least 1 network confirmation
-            <br />
-            3. Funds will be processed and sent to configured destinations
+            No real blockchain interactions are performed.
           </p>
         </div>
       </div>
@@ -99,7 +97,7 @@ export function DepositInfo({ session, onNewOperation }: DepositInfoProps) {
         className="w-full"
         onClick={onNewOperation}
       >
-        New Operation
+        New Simulation
       </Button>
     </div>
   );

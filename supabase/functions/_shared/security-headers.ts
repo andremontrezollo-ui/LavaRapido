@@ -1,7 +1,10 @@
 /**
  * Shared Security Headers for Edge Functions
- * 
+ *
  * Centralized headers applied to all responses.
+ * Set ALLOWED_ORIGIN env var to restrict CORS to your frontend domain.
+ * Defaults to no wildcard — returns the allowed origin only if the request
+ * origin matches the allowlist.
  */
 
 export const SECURITY_HEADERS: Record<string, string> = {
@@ -14,19 +17,53 @@ export const SECURITY_HEADERS: Record<string, string> = {
     "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
 };
 
-export const CORS_HEADERS: Record<string, string> = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+/**
+ * Returns CORS headers restricted to the configured allowed origin.
+ * If ALLOWED_ORIGIN is not set, no Allow-Origin header is returned,
+ * effectively blocking cross-origin requests.
+ */
+function getCorsHeaders(requestOrigin?: string | null): Record<string, string> {
+  const allowedOrigin = Deno.env.get("ALLOWED_ORIGIN") ?? "";
+  const allowedList = allowedOrigin
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
 
-export function jsonResponse(body: unknown, status: number, extra?: Record<string, string>): Response {
+  const headers: Record<string, string> = {
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  };
+
+  // Only set Allow-Origin if the request origin is explicitly in the allowlist
+  if (requestOrigin && allowedList.includes(requestOrigin)) {
+    headers["Access-Control-Allow-Origin"] = requestOrigin;
+    headers["Vary"] = "Origin";
+  }
+
+  return headers;
+}
+
+export function jsonResponse(
+  body: unknown,
+  status: number,
+  extra?: Record<string, string>,
+  requestOrigin?: string | null,
+): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...CORS_HEADERS, ...SECURITY_HEADERS, "Content-Type": "application/json", ...extra },
+    headers: {
+      ...getCorsHeaders(requestOrigin),
+      ...SECURITY_HEADERS,
+      "Content-Type": "application/json",
+      ...extra,
+    },
   });
 }
 
-export function corsResponse(): Response {
-  return new Response(null, { headers: CORS_HEADERS });
+export function corsResponse(requestOrigin?: string | null): Response {
+  return new Response(null, {
+    status: 204,
+    headers: getCorsHeaders(requestOrigin),
+  });
 }

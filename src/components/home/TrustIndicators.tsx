@@ -3,33 +3,33 @@ import { Lock, Eye, Zap, Server, Trash2, Globe } from "lucide-react";
 const indicators = [
   {
     icon: Lock,
-    title: "Unique addresses",
-    description: "Each operation receives an exclusive address, no reuse",
+    title: "Unique mock addresses",
+    description: "Each simulated session generates a unique testnet address — not reused",
   },
   {
     icon: Eye,
-    title: "Minimized logs",
-    description: "Minimal data retention, progressive automatic cleanup",
+    title: "Minimised data",
+    description: "Only session metadata is stored; auto-deleted within 24 hours",
   },
   {
     icon: Zap,
-    title: "Fast processing",
-    description: "System optimized for efficient confirmations",
+    title: "Conceptual flow",
+    description: "Demonstrates the processing concept without real blockchain calls",
   },
   {
     icon: Server,
-    title: "Liquidity pool",
-    description: "Structural dissociation between inputs and outputs",
+    title: "Dissociation model",
+    description: "Illustrates structural separation between simulated inputs and outputs",
   },
   {
     icon: Trash2,
-    title: "No traces",
-    description: "Sensitive metadata is automatically removed",
+    title: "Short retention",
+    description: "Session data is automatically purged — see data-retention policy",
   },
   {
     icon: Globe,
-    title: "Global access",
-    description: "Service accessible without geographic restrictions",
+    title: "Open prototype",
+    description: "Educational interface with no geographic restrictions",
   },
 ];
 
@@ -39,10 +39,10 @@ export function TrustIndicators() {
       <div className="container mx-auto px-4">
         <div className="max-w-3xl mx-auto text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-heading font-bold mb-4">
-            Operational <span className="gradient-text">principles</span>
+            Simulator <span className="gradient-text">design principles</span>
           </h2>
           <p className="text-muted-foreground text-lg">
-            We don't make promises we can't keep. These are the principles that guide our operation.
+            This prototype was built with clear boundaries. These are the principles that guide its design.
           </p>
         </div>
 

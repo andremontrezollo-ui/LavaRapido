@@ -93,6 +93,7 @@ export default function MixingPage() {
     if (result.data) {
       setSession({
         sessionId: result.data.sessionId,
+        statusToken: result.data.statusToken,
         depositAddress: result.data.depositAddress,
         createdAt: new Date(result.data.createdAt),
         expiresAt: new Date(result.data.expiresAt),
@@ -121,11 +122,15 @@ export default function MixingPage() {
           <div className="max-w-3xl mx-auto">
             {/* Header */}
             <div className="text-center mb-12">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-warning/10 border border-warning/20 text-warning text-xs font-medium mb-4">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                Educational simulator — no real funds involved
+              </div>
               <h1 className="text-3xl md:text-4xl font-heading font-bold mb-4">
-                Configure <span className="gradient-text">Mixing</span>
+                Simulator <span className="gradient-text">Configuration</span>
               </h1>
               <p className="text-muted-foreground">
-                Configure the parameters for your mixing operation
+                Configure parameters for the conceptual mixing demonstration
               </p>
             </div>
 
@@ -143,7 +148,7 @@ export default function MixingPage() {
                         Destination Addresses
                       </h2>
                       <p className="text-sm text-muted-foreground">
-                        Where you want to receive funds after mixing
+                        Simulated destination addresses (demo only — not used on-chain)
                       </p>
                     </div>
                     <Button
@@ -177,16 +182,16 @@ export default function MixingPage() {
                 {/* Delay Configuration */}
                 <DelayConfiguration delay={delay} onDelayChange={setDelay} />
 
-                {/* Warning */}
-                <div className="p-4 rounded-xl bg-warning/5 border border-warning/20 flex items-start gap-3">
-                  <AlertTriangle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
+                {/* Demo notice */}
+                <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 flex items-start gap-3">
+                  <AlertTriangle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-medium text-warning mb-1">
-                      Warning: Irreversible Operation
+                    <p className="font-medium text-primary mb-1">
+                      Demo / Simulator only
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      After confirming and sending funds, the operation cannot be
-                      canceled or reversed. Check all addresses carefully.
+                      This is a conceptual prototype. No real funds are moved. The deposit address
+                      is a testnet mock and is not valid on mainnet.
                     </p>
                   </div>
                 </div>

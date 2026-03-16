@@ -3,23 +3,23 @@ import { AlertTriangle, Info, CheckCircle2, XCircle } from "lucide-react";
 const transparencyItems = [
   {
     icon: CheckCircle2,
-    title: "What we do",
+    title: "What this simulator does",
     items: [
-      "Break the direct link between input and output",
-      "Use configurable time delays",
-      "Fragment values into multiple outputs",
-      "Operate with shared liquidity pool",
+      "Illustrates the concept of input/output dissociation",
+      "Generates mock testnet addresses (not valid on mainnet)",
+      "Demonstrates configurable time-delay parameters",
+      "Shows how multi-output fragmentation could look",
     ],
     variant: "positive" as const,
   },
   {
     icon: XCircle,
-    title: "What we DON'T do",
+    title: "What this simulator does NOT do",
     items: [
-      "We don't guarantee absolute anonymity",
-      "We don't reverse transactions after confirmation",
-      "We don't store data beyond what's necessary",
-      "We don't support illicit activities",
+      "Does not move, hold, or mix real Bitcoin",
+      "Does not connect to any real blockchain",
+      "Does not guarantee anonymity of any kind",
+      "Is not a financial service — for education only",
     ],
     variant: "negative" as const,
   },
@@ -28,11 +28,11 @@ const transparencyItems = [
 const warnings = [
   {
     icon: AlertTriangle,
-    text: "Blockchain transactions are irreversible. Verify all data before confirming.",
+    text: "This is an educational prototype. No real transactions are executed. Addresses shown are testnet mocks.",
   },
   {
     icon: Info,
-    text: "The service depends on Bitcoin network confirmations. Times may vary significantly.",
+    text: "Do not send real Bitcoin to any address displayed here. This simulator has no real blockchain connectivity.",
   },
 ];
 
@@ -47,7 +47,7 @@ export function TransparencySection() {
             Full <span className="gradient-text">transparency</span>
           </h2>
           <p className="text-muted-foreground text-lg">
-            We believe you should understand exactly what our service does — and what it doesn't.
+            This is a demo prototype. You should understand exactly what it does — and what it doesn't.
           </p>
         </div>
 

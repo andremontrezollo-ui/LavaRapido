@@ -21,13 +21,13 @@ export function ConfirmationSummary({
     <div className="space-y-8 animate-fade-up">
       <div className="glass-card p-6 md:p-8">
         <h2 className="font-heading font-semibold text-lg mb-6">
-          Operation Summary
+          Simulation Summary
         </h2>
 
         <div className="space-y-6">
           <div>
             <p className="text-sm text-muted-foreground mb-3">
-              Destination addresses
+              Simulated destination addresses (demo only)
             </p>
             {destinations.map((dest) => (
               <div
@@ -79,7 +79,7 @@ export function ConfirmationSummary({
               Creating session...
             </>
           ) : (
-            "Confirm and Generate Address"
+            "Confirm Simulation"
           )}
         </Button>
       </div>
