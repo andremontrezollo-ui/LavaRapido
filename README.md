@@ -65,11 +65,19 @@ npm run lint
 
 ### Environment Variables
 
-This project does not require any environment variables for frontend operation. All configuration is handled through `src/lib/constants.ts`.
+The frontend requires the following environment variables to connect to Supabase. Copy `.env.example` to `.env` and fill in the values before starting the development server:
 
-For backend functionality (when implemented via Lovable Cloud):
-- API keys and secrets should be stored in Lovable Cloud secrets
-- Never commit secrets to the repository
+```bash
+cp .env.example .env
+```
+
+| Variable | Description | Visibility |
+|---|---|---|
+| `VITE_SUPABASE_URL` | Supabase project URL | Public (client bundle) |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Supabase anonymous key | Public (client bundle) |
+| `VITE_SUPABASE_PROJECT_ID` | Supabase project ID (tooling only) | Public (client bundle) |
+
+> **Important:** All `VITE_` prefixed variables are embedded in the compiled JavaScript bundle and are therefore **publicly visible**. Never place private keys, `service_role` tokens, SMTP credentials, or any server-side secret in these variables. Backend secrets must be stored securely in the backend runtime environment (e.g., Supabase Edge Function secrets or Lovable Cloud secrets).
 
 ## Security Considerations
 
