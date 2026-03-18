@@ -1,24 +1,29 @@
 /**
- * Health Check Endpoint
- * GET /functions/v1/health
+ * health Edge Function — thin HTTP adapter
+ *
+ * GET or POST /functions/v1/health
+ * Returns the system health status.
+ *
+ * Business logic lives in: backend/src/modules/health/application/use-cases/get-system-health.usecase.ts
+ * Supabase adapter wired in: supabase/functions/_shared/container.ts
  */
 
-import { jsonResponse, corsResponse } from "../_shared/security-headers.ts";
-import { methodNotAllowed } from "../_shared/error-response.ts";
-
-const START_TIME = Date.now();
-const VERSION = "1.0.0";
+import { corsResponse } from "../_shared/cors.ts";
+import { jsonResponse } from "../_shared/response.ts";
+import { errors } from "../_shared/errors.ts";
+import { getContainer } from "../_shared/container.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return corsResponse();
-  if (req.method !== "GET" && req.method !== "POST") return methodNotAllowed();
+  if (req.method !== "GET" && req.method !== "POST") return errors.methodNotAllowed();
 
-  const uptimeSeconds = Math.round((Date.now() - START_TIME) / 1000);
+  const container = getContainer();
+  const health = container.getSystemHealth();
 
   return jsonResponse({
-    status: "ok",
-    uptime: uptimeSeconds,
-    version: VERSION,
-    timestamp: new Date().toISOString(),
+    status: health.status,
+    version: health.version,
+    uptime: health.uptimeSeconds,
+    timestamp: health.timestamp,
   }, 200);
 });

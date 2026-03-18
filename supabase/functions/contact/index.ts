@@ -1,8 +1,21 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { jsonResponse, corsResponse } from "../_shared/security-headers.ts";
-import { validationError, rateLimitError, internalError, methodNotAllowed, errorResponse, ErrorCodes } from "../_shared/error-response.ts";
-import { checkRateLimit, recordRateLimit, hashString } from "../_shared/rate-limiter.ts";
-import { logInfo, logWarn, logError, generateRequestId } from "../_shared/structured-logger.ts";
+/**
+ * contact Edge Function — thin HTTP adapter
+ *
+ * POST /functions/v1/contact
+ * Validates and submits a contact support ticket.
+ *
+ * Business logic lives in: backend/src/modules/contact/application/use-cases/submit-contact-message.usecase.ts
+ * Supabase adapter wired in: supabase/functions/_shared/container.ts
+ */
+
+import { corsResponse } from "../_shared/cors.ts";
+import { jsonResponse } from "../_shared/response.ts";
+import { errors } from "../_shared/errors.ts";
+import { telemetry } from "../_shared/telemetry.ts";
+import { extractClientIp, parseJsonBody, generateRequestId } from "../_shared/request.ts";
+import { getContainer } from "../_shared/container.ts";
+
+const RATE_LIMIT = { endpoint: "contact", maxRequests: 5, windowSeconds: 600 };
 
 const VALIDATION = {
   subject: { min: 3, max: 100 },
@@ -10,18 +23,9 @@ const VALIDATION = {
   replyContact: { max: 500 },
 };
 
-function sanitizeInput(input: string): string {
-  return input.trim().replace(/\0/g, "").replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "").replace(/\s{3,}/g, "  ");
-}
-
-function generateTicketId(): string {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  const array = new Uint8Array(6);
-  crypto.getRandomValues(array);
-  return "TKT-" + Array.from(array, (b) => chars[b % chars.length]).join("");
-}
-
-function validatePayload(body: unknown): { valid: true; data: { subject: string; message: string; replyContact: string } } | { valid: false; error: string } {
+function validateContactPayload(body: unknown):
+  | { valid: true; data: { subject: string; message: string; replyContact?: string } }
+  | { valid: false; error: string } {
   if (!body || typeof body !== "object") return { valid: false, error: "Invalid request body" };
   const { subject, message, replyContact } = body as Record<string, unknown>;
 
@@ -38,75 +42,52 @@ function validatePayload(body: unknown): { valid: true; data: { subject: string;
   return {
     valid: true,
     data: {
-      subject: sanitizeInput(subject as string),
-      message: sanitizeInput(message as string),
-      replyContact: typeof replyContact === "string" ? sanitizeInput(replyContact) : "",
+      subject: subject as string,
+      message: message as string,
+      replyContact: typeof replyContact === "string" ? replyContact : undefined,
     },
   };
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return corsResponse();
-  if (req.method !== "POST") return methodNotAllowed();
+  if (req.method !== "POST") return errors.methodNotAllowed();
 
   const requestId = generateRequestId();
   const startTime = Date.now();
+  const container = getContainer();
 
   try {
-    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-    const ipHash = await hashString(clientIp);
+    const clientIp = extractClientIp(req);
+    const ipHash = await container.hashString(clientIp);
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
-
-    // Rate limit: max 5 tickets per 10 minutes per IP
-    const rl = await checkRateLimit(ipHash, { endpoint: "contact", maxRequests: 5, windowSeconds: 600 }, supabase);
-
+    // Rate limiting
+    const rl = await container.checkRateLimit(ipHash, RATE_LIMIT);
     if (!rl.allowed) {
-      logWarn("Rate limit triggered", { requestId, endpoint: "contact", rateLimitTriggered: true, status: 429 });
-      return rateLimitError(rl.retryAfterSeconds);
+      telemetry.warn("Rate limit triggered", { requestId, endpoint: "contact", rateLimitTriggered: true, status: 429 });
+      return errors.rateLimit(rl.retryAfterSeconds);
     }
 
-    let body: unknown;
-    try {
-      body = await req.json();
-    } catch {
-      return validationError("Invalid JSON");
-    }
+    const body = await parseJsonBody(req);
+    if (!body) return errors.validation("Invalid JSON");
 
-    const validation = validatePayload(body);
-    if (!validation.valid) {
-      return validationError(validation.error);
-    }
+    const validation = validateContactPayload(body);
+    if (!validation.valid) return errors.validation(validation.error);
 
-    await recordRateLimit(ipHash, "contact", supabase);
+    await container.recordRateLimit(ipHash, RATE_LIMIT.endpoint);
 
-    const ticketId = generateTicketId();
+    // Delegate to use case
+    const result = await container.submitContactMessage({
+      subject: validation.data.subject,
+      message: validation.data.message,
+      replyContact: validation.data.replyContact,
+      ipHash,
+    });
 
-    const { data, error } = await supabase
-      .from("contact_tickets")
-      .insert({
-        ticket_id: ticketId,
-        subject: validation.data.subject,
-        message: validation.data.message,
-        reply_contact: validation.data.replyContact || null,
-        ip_hash: ipHash,
-      })
-      .select("ticket_id, created_at")
-      .single();
-
-    if (error) {
-      logError("DB error creating ticket", { requestId, endpoint: "contact", status: 500, latencyMs: Date.now() - startTime });
-      return internalError();
-    }
-
-    logInfo("Ticket created", { requestId, endpoint: "contact", status: 201, latencyMs: Date.now() - startTime });
-
-    return jsonResponse({ ticketId: data.ticket_id, createdAt: data.created_at }, 201);
-  } catch (err) {
-    logError("Unexpected error", { requestId, endpoint: "contact", status: 500, latencyMs: Date.now() - startTime });
-    return internalError();
+    telemetry.info("Ticket created", { requestId, endpoint: "contact", status: 201, latencyMs: Date.now() - startTime });
+    return jsonResponse(result, 201);
+  } catch {
+    telemetry.error("Unexpected error", { requestId, endpoint: "contact", status: 500, latencyMs: Date.now() - startTime });
+    return errors.internal();
   }
 });
