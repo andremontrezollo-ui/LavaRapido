@@ -2,81 +2,160 @@
 
 ## Overview
 
-ShadowMix follows **Clean Architecture + Domain-Driven Design (DDD)** with strict module boundaries and event-driven inter-module communication.
+ShadowMix follows **Clean Architecture + Domain-Driven Design (DDD)** with strict module
+boundaries and event-driven inter-module communication.
+
+The **single source of truth for all business logic** is `backend/src/`.
+Supabase Edge Functions are **thin HTTP adapters** only — they parse requests, delegate to
+use cases, and map errors to HTTP responses.
+
+---
+
+## Request Flow
+
+```
+Client Request
+    │
+    ▼
+supabase/functions/<fn>/index.ts   ← HTTP adapter only
+    │  parse request, hash IP
+    │  inject Deno repository implementations
+    ▼
+backend/src/modules/<module>/      ← ALL business logic lives here
+  application/use-cases/
+    │  validate inputs
+    │  enforce rate limits
+    │  run domain logic
+    │  call repository ports
+    ▼
+supabase/functions/_shared/repositories/  ← Deno/Supabase infra
+    │  SQL via Supabase JS client
+    ▼
+Supabase PostgreSQL
+    │
+    ▼
+HTTP Response (via use-case output)
+```
+
+---
 
 ## Module Diagram
 
 ```
-┌────────────────────────────────────────────────────────┐
-│                      API Layer                         │
-│  (Edge Functions: mix-sessions, contact, health, etc.) │
-└───────────────┬───────────────────────┬────────────────┘
-                │                       │
-       ┌────────▼────────┐     ┌────────▼────────┐
-       │  Application    │     │  Application    │
-       │  (Use Cases)    │     │  (Use Cases)    │
-       └────────┬────────┘     └────────┬────────┘
-                │                       │
-       ┌────────▼────────┐     ┌────────▼────────┐
-       │  Domain          │     │  Domain          │
-       │  (Entities,      │     │  (Entities,      │
-       │   Value Objects, │     │   Value Objects, │
-       │   Policies,      │     │   Policies,      │
-       │   Events)        │     │   Events)        │
-       └─────────────────┘     └─────────────────┘
-                │                       │
-       ┌────────▼───────────────────────▼────────┐
-       │              Shared Kernel               │
-       │  (DomainEvent, EventBus, ErrorResponse,  │
-       │   Ports, Policies base, Result types)    │
-       └──────────────────┬──────────────────────┘
-                          │
-       ┌──────────────────▼──────────────────────┐
-       │           Infrastructure                 │
-       │  (EventBus impl, Logger, KV Store,       │
-       │   Security Headers, Metrics)             │
-       └─────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│               supabase/functions/<fn>/index.ts               │
+│  (HTTP adapter: parse → call use case → return response)     │
+└────────────────────────┬─────────────────────────────────────┘
+                         │ imports use cases from
+                         ▼
+┌──────────────────────────────────────────────────────────────┐
+│                    backend/src/modules/                       │
+│                                                              │
+│  ┌─────────────────┐  ┌──────────────┐  ┌────────────────┐  │
+│  │   mix-session   │  │   contact    │  │    health      │  │
+│  │  ─────────────  │  │  ──────────  │  │  ────────────  │  │
+│  │  domain/        │  │  domain/     │  │  application/  │  │
+│  │  application/   │  │  application/│  │  use-cases/    │  │
+│  │    use-cases/   │  │  use-cases/  │  │                │  │
+│  │    ports/       │  │  ports/      │  │                │  │
+│  └────────┬────────┘  └──────┬───────┘  └────────────────┘  │
+└───────────┼─────────────────┼──────────────────────────────-─┘
+            │ implements ports │
+            ▼                 ▼
+┌──────────────────────────────────────────────────────────────┐
+│          supabase/functions/_shared/repositories/            │
+│  (Deno runtime: SupabaseMixSessionRepository,                │
+│   SupabaseContactRepository, SupabaseRateLimitRepository)    │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-## Modules
+---
 
-| Module | Responsibility |
-|--------|---------------|
-| **address-generator** | Sandbox of identities: unique, non-reusable tokens per operation |
-| **blockchain-monitor** | Observes blockchain state, normalizes events |
-| **liquidity-pool** | Structural dissociation layer for fund aggregation |
-| **log-minimizer** | Privacy-preserving logging with data classification and retention |
-| **payment-scheduler** | Scheduling policies, time windows, batch management |
-
-## Inter-Module Communication
-
-Modules **never** import directly from each other. Communication flows through the **EventBus**:
+## Directory Structure
 
 ```
-address-generator ──► EventBus ──► blockchain-monitor
-                                   liquidity-pool
-                                   payment-scheduler
-                                   log-minimizer
+backend/src/
+├── bootstrap/
+│   └── container.ts          # DI wiring — builds all use cases
+├── shared/
+│   ├── application/
+│   │   └── UseCase.ts        # Base use-case interface
+│   ├── ports/
+│   │   └── RateLimitRepository.ts  # Shared rate-limit port
+│   ├── events/               # DomainEvent, EventBus (existing)
+│   ├── http/                 # HTTP response builders (existing)
+│   └── policies/             # Policy abstractions (existing)
+├── modules/
+│   ├── mix-session/          # NEW — mixing session bounded context
+│   │   ├── domain/MixSession.ts
+│   │   ├── application/ports/MixSessionRepository.ts
+│   │   └── application/use-cases/
+│   │       ├── CreateMixSession.ts
+│   │       ├── GetMixSessionStatus.ts
+│   │       └── CleanupExpiredSessions.ts
+│   ├── contact/              # NEW — contact form bounded context
+│   │   ├── domain/ContactTicket.ts
+│   │   ├── application/ports/ContactRepository.ts
+│   │   └── application/use-cases/SubmitContactMessage.ts
+│   ├── health/               # NEW — health check module
+│   │   └── application/use-cases/GetSystemHealth.ts
+│   ├── address-generator/    # (existing)
+│   ├── blockchain-monitor/   # (existing)
+│   ├── liquidity-pool/       # (existing)
+│   ├── log-minimizer/        # (existing)
+│   ├── payment-scheduler/    # (existing)
+│   └── deposit-saga/         # (existing)
+└── infra/
+    ├── persistence/
+    │   └── supabase/
+    │       ├── client.ts     # Node.js Supabase singleton
+    │       └── repositories/ # Node.js repository implementations
+    └── ... (existing)
+
+supabase/functions/
+├── _shared/
+│   ├── repositories/         # NEW — Deno repository implementations
+│   │   ├── SupabaseMixSessionRepository.ts
+│   │   ├── SupabaseContactRepository.ts
+│   │   └── SupabaseRateLimitRepository.ts
+│   ├── security-headers.ts   # (existing)
+│   ├── error-response.ts     # (existing)
+│   ├── structured-logger.ts  # (existing)
+│   └── rate-limiter.ts       # (existing — legacy, kept for reference)
+├── mix-sessions/index.ts     # Thin adapter → CreateMixSessionUseCase
+├── mix-session-status/index.ts # Thin adapter → GetMixSessionStatusUseCase
+├── cleanup/index.ts          # Thin adapter → CleanupExpiredSessionsUseCase
+├── contact/index.ts          # Thin adapter → SubmitContactMessageUseCase
+└── health/index.ts           # Thin adapter → GetSystemHealthUseCase
 ```
 
-### Event Flow Example
+---
 
-1. `address-generator` emits `ADDRESS_TOKEN_EMITTED`
-2. `blockchain-monitor` subscribes and watches for deposits
-3. On deposit detection, emits `TRANSACTION_CONFIRMED`
-4. `liquidity-pool` reserves funds via `LIQUIDITY_RESERVED`
-5. `payment-scheduler` plans outputs via `PAYMENT_PLANNED`
+## Use Cases
+
+| Use Case | Module | What it does |
+|----------|--------|-------------|
+| `CreateMixSessionUseCase` | mix-session | Rate-limit check, generate address, persist session |
+| `GetMixSessionStatusUseCase` | mix-session | UUID validation, expiry check, auto-update status |
+| `CleanupExpiredSessionsUseCase` | mix-session | Mark stale sessions expired, prune old rate limits |
+| `SubmitContactMessageUseCase` | contact | Rate-limit, validate & sanitise, generate ticket ID, persist |
+| `GetSystemHealthUseCase` | health | Return uptime, version, timestamp |
+
+---
 
 ## Dependency Rules
 
 ```
-Domain ──► (nothing external)
-Application ──► Domain, Shared Ports
-Infrastructure ──► Application (implements ports), Domain
-API ──► Application (orchestrates use cases)
+Domain           → (nothing external)
+Application      → Domain, Shared Ports
+Infrastructure   → Application (implements ports), Domain
+HTTP Adapter     → Application (calls use cases)
 ```
 
 **Domain MUST NOT depend on Infrastructure.**
+**Edge Functions MUST NOT contain business logic.**
+
+---
 
 ## Policy Objects
 
@@ -90,20 +169,37 @@ Complex business rules are encapsulated in policy objects:
 | `LogRetentionPolicy` | log-minimizer/domain/policies | Data classification and retention |
 | `RateLimitPolicy` | payment-scheduler/domain/policies | Rate limit evaluation |
 
-## Edge Functions (Runtime)
+---
 
-| Function | Method | Purpose |
-|----------|--------|---------|
-| `mix-sessions` | POST | Create mixing session |
-| `mix-session-status` | POST | Query session status |
-| `contact` | POST | Create support ticket |
-| `health` | GET/POST | Health check |
-| `cleanup` | POST | Expire sessions, prune rate limits |
+## Bootstrap / DI Container
 
-## Shared Utilities
+```typescript
+import { buildContainer } from 'backend/src/bootstrap/container';
+import { getSupabaseClient } from 'backend/src/infra/persistence/supabase/client';
+import { SupabaseMixSessionRepository } from 'backend/src/infra/persistence/supabase/repositories/SupabaseMixSessionRepository';
+import { SupabaseContactRepository }    from 'backend/src/infra/persistence/supabase/repositories/SupabaseContactRepository';
+import { SupabaseRateLimitRepository }  from 'backend/src/infra/persistence/supabase/repositories/SupabaseRateLimitRepository';
 
-All Edge Functions use shared utilities from `_shared/`:
-- `security-headers.ts` — Centralized CORS + security headers
-- `error-response.ts` — Standardized error format
-- `structured-logger.ts` — Privacy-preserving structured logs
-- `rate-limiter.ts` — Reusable rate limiting logic
+const client    = getSupabaseClient();
+const container = buildContainer({
+  mixSessionRepo: new SupabaseMixSessionRepository(client),
+  contactRepo:    new SupabaseContactRepository(client),
+  rateLimitRepo:  new SupabaseRateLimitRepository(client),
+});
+
+// container.createMixSession.execute(...)
+// container.submitContactMessage.execute(...)
+```
+
+---
+
+## Edge Functions (Adapters)
+
+| Function | Method | Use Case Called |
+|----------|--------|-----------------|
+| `mix-sessions` | POST | `CreateMixSessionUseCase` |
+| `mix-session-status` | POST | `GetMixSessionStatusUseCase` |
+| `contact` | POST | `SubmitContactMessageUseCase` |
+| `health` | GET/POST | `GetSystemHealthUseCase` |
+| `cleanup` | POST | `CleanupExpiredSessionsUseCase` |
+

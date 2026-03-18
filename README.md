@@ -107,6 +107,21 @@ The application can be deployed via Lovable's publish feature:
 2. Click Share → Publish
 3. Optionally configure a custom domain
 
+## Architecture
+
+The application follows **Clean Architecture + DDD**. Business logic lives exclusively in
+`backend/src/` and Supabase Edge Functions act as thin HTTP adapters.
+
+```
+supabase/functions/<fn>/   ← HTTP adapter only (parse → use case → response)
+backend/src/modules/       ← ALL business logic (domain + use cases + ports)
+backend/src/infra/         ← Node.js infrastructure (Supabase repos, scheduler, etc.)
+supabase/functions/_shared/repositories/  ← Deno infrastructure (Supabase repos)
+```
+
+See [`docs/architecture.md`](docs/architecture.md) for the full architecture diagram and
+module descriptions.
+
 ## Architecture Principles
 
 The project follows these architectural principles (documented in `docs/backend/`):
