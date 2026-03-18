@@ -1,14 +1,21 @@
 /**
- * Cleanup Job
- * 
- * Deletes expired mix_sessions and old rate_limits records.
- * Triggered via pg_cron or manual invocation.
+ * cleanup — HTTP adapter (Edge Function).
+ *
+ * Responsibilities:
+ *  1. Authenticate the request (POST only).
+ *  2. Call CleanupExpiredSessionsUseCase from the backend core.
+ *  3. Return the cleanup statistics.
+ *
+ * NO business logic here.
+ * Trigger: pg_cron, scheduled job, or manual invocation.
  */
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { jsonResponse, corsResponse } from "../_shared/security-headers.ts";
 import { internalError, methodNotAllowed } from "../_shared/error-response.ts";
 import { logInfo, logError, generateRequestId } from "../_shared/structured-logger.ts";
+import { SupabaseMixSessionRepository } from "../_shared/repositories/SupabaseMixSessionRepository.ts";
+import { SupabaseRateLimitRepository } from "../_shared/repositories/SupabaseRateLimitRepository.ts";
+import { CleanupExpiredSessionsUseCase } from "../../../backend/src/modules/mix-session/application/use-cases/CleanupExpiredSessions.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return corsResponse();
@@ -18,42 +25,28 @@ Deno.serve(async (req) => {
   const startTime = Date.now();
 
   try {
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    const useCase = new CleanupExpiredSessionsUseCase(
+      new SupabaseMixSessionRepository(supabaseUrl, serviceRoleKey),
+      new SupabaseRateLimitRepository(supabaseUrl, serviceRoleKey),
     );
 
-    const now = new Date().toISOString();
-
-    // 1. Mark expired sessions
-    const { count: expiredSessions } = await supabase
-      .from("mix_sessions")
-      .update({ status: "expired" })
-      .eq("status", "active")
-      .lt("expires_at", now)
-      .select("*", { count: "exact", head: true });
-
-    // 2. Delete rate limit records older than 1 hour
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-    const { count: deletedRateLimits } = await supabase
-      .from("rate_limits")
-      .delete()
-      .lt("created_at", oneHourAgo)
-      .select("*", { count: "exact", head: true });
+    const result = await useCase.execute();
 
     logInfo("Cleanup completed", {
       requestId,
       endpoint: "cleanup",
       status: 200,
       latencyMs: Date.now() - startTime,
-      expiredSessions: expiredSessions ?? 0,
-      deletedRateLimits: deletedRateLimits ?? 0,
+      expiredSessions: result.expiredSessions,
+      deletedRateLimits: result.deletedRateLimits,
     });
 
     return jsonResponse({
       status: "ok",
-      expiredSessions: expiredSessions ?? 0,
-      deletedRateLimits: deletedRateLimits ?? 0,
+      ...result,
       timestamp: new Date().toISOString(),
     }, 200);
   } catch (err) {
