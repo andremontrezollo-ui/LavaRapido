@@ -109,13 +109,29 @@ The application can be deployed via Lovable's publish feature:
 
 ## Architecture Principles
 
-The project follows these architectural principles (documented in `docs/backend/`):
+The project follows these architectural principles:
 
+- **Backend = Única Fonte de Verdade**: `backend/src` contains all domain entities, use cases, and business rules
+- **Edge Functions = HTTP Adapter Only**: `supabase/functions` contain thin wrappers that parse requests and delegate to use cases
 - **Separation of Responsibilities**: Each module has a single purpose
-- **Low Coupling / High Cohesion**: Components communicate through well-defined interfaces
+- **Low Coupling / High Cohesion**: Components communicate through well-defined interfaces (ports)
 - **Privacy by Architecture**: Minimal data collection and segregated contexts
 - **Security by Design**: Defense in depth, no secrets in application code
 - **Controlled Auditability**: Privacy-preserving logging
+
+### Where Business Logic Lives
+
+```
+backend/src/
+  modules/
+    mix-session/     ← session creation, expiry, cleanup rules
+    contact/         ← ticket validation, sanitization, rate limits
+    health/          ← health check response
+  infra/persistence/supabase/  ← Supabase adapters (repositories)
+  bootstrap/container.ts       ← dependency injection wiring
+```
+
+See [`docs/architecture.md`](docs/architecture.md) for the full architecture diagram.
 
 ## Contributing
 

@@ -5,20 +5,12 @@
 
 import { jsonResponse, corsResponse } from "../_shared/security-headers.ts";
 import { methodNotAllowed } from "../_shared/error-response.ts";
-
-const START_TIME = Date.now();
-const VERSION = "1.0.0";
+import { container } from "../../../backend/src/bootstrap/container.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return corsResponse();
   if (req.method !== "GET" && req.method !== "POST") return methodNotAllowed();
 
-  const uptimeSeconds = Math.round((Date.now() - START_TIME) / 1000);
-
-  return jsonResponse({
-    status: "ok",
-    uptime: uptimeSeconds,
-    version: VERSION,
-    timestamp: new Date().toISOString(),
-  }, 200);
+  const result = await container.getSystemHealth.execute();
+  return jsonResponse(result, 200);
 });

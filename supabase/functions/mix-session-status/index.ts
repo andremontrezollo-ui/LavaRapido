@@ -4,10 +4,11 @@
  * Body: { sessionId: "uuid" }
  */
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { jsonResponse, corsResponse } from "../_shared/security-headers.ts";
 import { validationError, notFoundError, internalError, methodNotAllowed } from "../_shared/error-response.ts";
 import { logInfo, logError, generateRequestId } from "../_shared/structured-logger.ts";
+import { container } from "../../../backend/src/bootstrap/container.ts";
+import { SessionNotFoundError } from "../../../backend/src/modules/mix-session/index.ts";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -33,43 +34,15 @@ Deno.serve(async (req) => {
       return validationError("Invalid session ID format. Must be a valid UUID.");
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    const result = await container.getMixSessionStatus.execute({ sessionId });
 
-    const { data, error } = await supabase
-      .from("mix_sessions")
-      .select("id, status, expires_at, created_at")
-      .eq("id", sessionId)
-      .single();
-
-    if (error || !data) {
+    logInfo("Session status queried", { requestId, endpoint: "mix-session-status", status: 200, latencyMs: Date.now() - startTime });
+    return jsonResponse(result, 200);
+  } catch (err) {
+    if (err instanceof SessionNotFoundError) {
       logInfo("Session not found", { requestId, endpoint: "mix-session-status", status: 404, latencyMs: Date.now() - startTime });
       return notFoundError("Session not found");
     }
-
-    // Check if expired
-    const isExpired = new Date(data.expires_at) < new Date();
-    const status = isExpired ? "expired" : data.status;
-
-    // Update status in DB if expired
-    if (isExpired && data.status !== "expired") {
-      await supabase
-        .from("mix_sessions")
-        .update({ status: "expired" })
-        .eq("id", sessionId);
-    }
-
-    logInfo("Session status queried", { requestId, endpoint: "mix-session-status", status: 200, latencyMs: Date.now() - startTime });
-
-    return jsonResponse({
-      sessionId: data.id,
-      status,
-      expiresAt: data.expires_at,
-      createdAt: data.created_at,
-    }, 200);
-  } catch (err) {
     logError("Unexpected error", { requestId, endpoint: "mix-session-status", status: 500, latencyMs: Date.now() - startTime });
     return internalError();
   }
