@@ -1,5 +1,5 @@
 /**
- * API Layer — exports all controllers, middlewares, schemas, and security.
+ * API Layer — exports all controllers, middlewares, schemas, security, contracts and presenters.
  */
 
 // Controllers
@@ -28,3 +28,11 @@ export { hashIp, SECURITY_HEADERS } from './security/security-utils';
 
 // Validators (legacy)
 export { validateContactPayload, validateSessionId } from './validators/index';
+
+// Contracts — stable HTTP request/response shapes
+export * from './contracts';
+
+// Presenters — maps use-case DTOs to HTTP contracts
+export { MixSessionPresenter } from './presenters/mix-session.presenter';
+export { ContactPresenter } from './presenters/contact.presenter';
+export { HealthPresenter } from './presenters/health.presenter';

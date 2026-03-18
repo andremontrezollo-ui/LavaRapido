@@ -1,63 +1,45 @@
 /**
- * Cleanup Job
- * 
- * Deletes expired mix_sessions and old rate_limits records.
+ * cleanup Edge Function — thin HTTP adapter
+ *
+ * POST /functions/v1/cleanup
+ * Marks expired mix_sessions and deletes stale rate_limit records.
  * Triggered via pg_cron or manual invocation.
+ *
+ * Business logic lives in: backend/src/modules/mix-session/application/use-cases/cleanup-expired-sessions.usecase.ts
+ * Supabase adapter wired in: supabase/functions/_shared/container.ts
  */
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { jsonResponse, corsResponse } from "../_shared/security-headers.ts";
-import { internalError, methodNotAllowed } from "../_shared/error-response.ts";
-import { logInfo, logError, generateRequestId } from "../_shared/structured-logger.ts";
+import { corsResponse } from "../_shared/cors.ts";
+import { jsonResponse } from "../_shared/response.ts";
+import { errors } from "../_shared/errors.ts";
+import { telemetry } from "../_shared/telemetry.ts";
+import { generateRequestId } from "../_shared/request.ts";
+import { getContainer } from "../_shared/container.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return corsResponse();
-  if (req.method !== "POST") return methodNotAllowed();
+  if (req.method !== "POST") return errors.methodNotAllowed();
 
   const requestId = generateRequestId();
   const startTime = Date.now();
+  const container = getContainer();
 
   try {
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    // Delegate to use case
+    const result = await container.cleanupExpiredSessions();
 
-    const now = new Date().toISOString();
-
-    // 1. Mark expired sessions
-    const { count: expiredSessions } = await supabase
-      .from("mix_sessions")
-      .update({ status: "expired" })
-      .eq("status", "active")
-      .lt("expires_at", now)
-      .select("*", { count: "exact", head: true });
-
-    // 2. Delete rate limit records older than 1 hour
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-    const { count: deletedRateLimits } = await supabase
-      .from("rate_limits")
-      .delete()
-      .lt("created_at", oneHourAgo)
-      .select("*", { count: "exact", head: true });
-
-    logInfo("Cleanup completed", {
+    telemetry.info("Cleanup completed", {
       requestId,
       endpoint: "cleanup",
       status: 200,
       latencyMs: Date.now() - startTime,
-      expiredSessions: expiredSessions ?? 0,
-      deletedRateLimits: deletedRateLimits ?? 0,
+      expiredSessions: result.expiredSessions,
+      deletedRateLimits: result.deletedRateLimits,
     });
 
-    return jsonResponse({
-      status: "ok",
-      expiredSessions: expiredSessions ?? 0,
-      deletedRateLimits: deletedRateLimits ?? 0,
-      timestamp: new Date().toISOString(),
-    }, 200);
-  } catch (err) {
-    logError("Cleanup failed", { requestId, endpoint: "cleanup", status: 500, latencyMs: Date.now() - startTime });
-    return internalError();
+    return jsonResponse({ status: "ok", ...result }, 200);
+  } catch {
+    telemetry.error("Cleanup failed", { requestId, endpoint: "cleanup", status: 500, latencyMs: Date.now() - startTime });
+    return errors.internal();
   }
 });

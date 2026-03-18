@@ -1,76 +1,50 @@
 /**
- * Mix Session Status Lookup
+ * mix-session-status Edge Function — thin HTTP adapter
+ *
  * POST /functions/v1/mix-session-status
  * Body: { sessionId: "uuid" }
+ *
+ * Business logic lives in: backend/src/modules/mix-session/application/use-cases/get-mix-session-status.usecase.ts
+ * Supabase adapter wired in: supabase/functions/_shared/container.ts
  */
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { jsonResponse, corsResponse } from "../_shared/security-headers.ts";
-import { validationError, notFoundError, internalError, methodNotAllowed } from "../_shared/error-response.ts";
-import { logInfo, logError, generateRequestId } from "../_shared/structured-logger.ts";
+import { corsResponse } from "../_shared/cors.ts";
+import { jsonResponse } from "../_shared/response.ts";
+import { errors, ErrorCodes } from "../_shared/errors.ts";
+import { telemetry } from "../_shared/telemetry.ts";
+import { parseJsonBody, generateRequestId } from "../_shared/request.ts";
+import { getContainer, SessionNotFoundError } from "../_shared/container.ts";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return corsResponse();
-  if (req.method !== "POST") return methodNotAllowed();
+  if (req.method !== "POST") return errors.methodNotAllowed();
 
   const requestId = generateRequestId();
   const startTime = Date.now();
+  const container = getContainer();
 
   try {
-    let body: unknown;
-    try {
-      body = await req.json();
-    } catch {
-      return validationError("Invalid JSON");
-    }
+    const body = await parseJsonBody<Record<string, unknown>>(req);
+    if (!body) return errors.validation("Invalid JSON");
 
-    if (!body || typeof body !== "object") return validationError("Invalid request body");
-    const { sessionId } = body as Record<string, unknown>;
-
+    const { sessionId } = body;
     if (typeof sessionId !== "string" || !UUID_RE.test(sessionId)) {
-      return validationError("Invalid session ID format. Must be a valid UUID.");
+      return errors.validation("Invalid session ID format. Must be a valid UUID.");
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    // Delegate to use case
+    const result = await container.getMixSessionStatus({ sessionId });
 
-    const { data, error } = await supabase
-      .from("mix_sessions")
-      .select("id, status, expires_at, created_at")
-      .eq("id", sessionId)
-      .single();
-
-    if (error || !data) {
-      logInfo("Session not found", { requestId, endpoint: "mix-session-status", status: 404, latencyMs: Date.now() - startTime });
-      return notFoundError("Session not found");
-    }
-
-    // Check if expired
-    const isExpired = new Date(data.expires_at) < new Date();
-    const status = isExpired ? "expired" : data.status;
-
-    // Update status in DB if expired
-    if (isExpired && data.status !== "expired") {
-      await supabase
-        .from("mix_sessions")
-        .update({ status: "expired" })
-        .eq("id", sessionId);
-    }
-
-    logInfo("Session status queried", { requestId, endpoint: "mix-session-status", status: 200, latencyMs: Date.now() - startTime });
-
-    return jsonResponse({
-      sessionId: data.id,
-      status,
-      expiresAt: data.expires_at,
-      createdAt: data.created_at,
-    }, 200);
+    telemetry.info("Session status queried", { requestId, endpoint: "mix-session-status", status: 200, latencyMs: Date.now() - startTime });
+    return jsonResponse(result, 200);
   } catch (err) {
-    logError("Unexpected error", { requestId, endpoint: "mix-session-status", status: 500, latencyMs: Date.now() - startTime });
-    return internalError();
+    if (err instanceof SessionNotFoundError) {
+      telemetry.info("Session not found", { requestId, endpoint: "mix-session-status", status: 404, latencyMs: Date.now() - startTime });
+      return errors.notFound("Session not found");
+    }
+    telemetry.error("Unexpected error", { requestId, endpoint: "mix-session-status", status: 500, latencyMs: Date.now() - startTime });
+    return errors.internal();
   }
 });
