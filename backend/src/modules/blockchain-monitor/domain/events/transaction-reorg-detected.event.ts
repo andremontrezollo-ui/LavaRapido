@@ -2,7 +2,7 @@
  * TransactionReorgDetected Domain Event
  */
 
-import type { DomainEvent } from '../../../../shared/events/DomainEvent';
+import type { DomainEvent } from '../../../../shared/events/domain-event';
 
 export interface TransactionReorgDetectedEvent extends DomainEvent {
   readonly type: 'TRANSACTION_REORG_DETECTED';

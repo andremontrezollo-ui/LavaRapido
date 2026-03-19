@@ -3,7 +3,7 @@
  * Supports publish, subscribe, deduplication via inbox, and DLQ.
  */
 
-import type { DomainEvent, EventType, SystemEvent } from './DomainEvent';
+import type { DomainEvent, EventType, SystemEvent } from './domain-event';
 import type { EventHandler } from './event-handler';
 
 export { EventHandler };

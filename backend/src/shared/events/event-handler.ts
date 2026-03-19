@@ -2,7 +2,7 @@
  * Typed event handler contract.
  */
 
-import type { DomainEvent } from './DomainEvent';
+import type { DomainEvent } from './domain-event';
 
 export interface EventHandler<E extends DomainEvent = DomainEvent> {
   readonly handlerName: string;

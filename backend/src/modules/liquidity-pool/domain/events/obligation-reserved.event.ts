@@ -1,4 +1,4 @@
-import type { DomainEvent } from '../../../../shared/events/DomainEvent';
+import type { DomainEvent } from '../../../../shared/events/domain-event';
 
 export interface ObligationReservedEvent extends DomainEvent {
   readonly type: 'OBLIGATION_RESERVED';

@@ -15,7 +15,7 @@ import type { GenerateAddressRequest } from '../dtos/generate-address.request';
 import type { GenerateAddressResponse } from '../dtos/generate-address.response';
 import type { AddressRepository } from '../ports/address-repository.port';
 import type { RandomGenerator } from '../ports/random-generator.port';
-import type { EventPublisher } from '../../../../shared/ports';
+import type { AddressEventPublisher } from '../ports/event-publisher.port';
 
 export class GenerateAddressUseCase {
   private readonly expirationPolicy = new AddressExpirationPolicy();
@@ -24,7 +24,7 @@ export class GenerateAddressUseCase {
   constructor(
     private readonly addressRepo: AddressRepository,
     private readonly randomGenerator: RandomGenerator,
-    private readonly eventPublisher: EventPublisher
+    private readonly eventPublisher: AddressEventPublisher
   ) {}
 
   async execute(request: GenerateAddressRequest): Promise<GenerateAddressResponse> {

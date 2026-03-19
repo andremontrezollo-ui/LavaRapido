@@ -1,67 +1,28 @@
 /**
  * Blockchain Monitor - Infrastructure Layer
- * 
- * Adapters for data sources and simulators.
- * Implements ports defined in application layer.
+ *
+ * Adapters, repositories, and mappers implementing application ports.
  */
 
-import type { BlockchainDataSource, EventPublisher } from '../application';
-import type { BlockchainEvent, TransactionId, BlockHeight } from '../domain';
+import type { BlockchainEventPublisher } from '../application';
+import type { DomainEvent } from '../../../shared/events/domain-event';
 
-// Simulated/Mock Data Source for Development
-export class SimulatedBlockchainDataSource implements BlockchainDataSource {
-  private currentHeight = 800000;
-  private transactions = new Map<string, { confirmations: number }>();
-
-  async getCurrentHeight(): Promise<BlockHeight> {
-    return { value: this.currentHeight };
-  }
-
-  async getTransaction(txId: TransactionId): Promise<{ confirmations: number } | null> {
-    return this.transactions.get(txId.hash) ?? null;
-  }
-
-  async getFeeEstimates(): Promise<{ low: number; medium: number; high: number }> {
-    // Simulated fee rates in sat/vB
-    return {
-      low: 5,
-      medium: 15,
-      high: 30,
-    };
-  }
-
-  // Test helpers
-  simulateNewBlock(): void {
-    this.currentHeight++;
-    // Increment confirmations for all tracked transactions
-    for (const [hash, tx] of this.transactions) {
-      this.transactions.set(hash, { confirmations: tx.confirmations + 1 });
-    }
-  }
-
-  addTransaction(hash: string, confirmations = 0): void {
-    this.transactions.set(hash, { confirmations });
-  }
-}
+// Re-export concrete implementations from sub-modules
+export { MockBlockchainSource } from './adapters/mock-blockchain-source.adapter';
+export { BlockchainEventNormalizer } from './adapters/blockchain-event-normalizer.adapter';
+export { InMemoryObservedTransactionRepository } from './repositories/observed-transaction.repository';
+export { ObservedTransactionMapper } from './mappers/observed-transaction.mapper';
+export type { ObservedTransactionRecord } from './mappers/observed-transaction.mapper';
 
 // In-Memory Event Publisher for Development
-export class InMemoryEventPublisher implements EventPublisher {
-  private events: BlockchainEvent[] = [];
-  private subscribers: Array<(event: BlockchainEvent) => void> = [];
+export class InMemoryBlockchainEventPublisher implements BlockchainEventPublisher {
+  private events: DomainEvent[] = [];
 
-  async publish(event: BlockchainEvent): Promise<void> {
+  async publish(event: DomainEvent): Promise<void> {
     this.events.push(event);
-    this.subscribers.forEach(sub => sub(event));
   }
 
-  subscribe(handler: (event: BlockchainEvent) => void): () => void {
-    this.subscribers.push(handler);
-    return () => {
-      this.subscribers = this.subscribers.filter(s => s !== handler);
-    };
-  }
-
-  getEvents(): readonly BlockchainEvent[] {
+  getEvents(): readonly DomainEvent[] {
     return [...this.events];
   }
 

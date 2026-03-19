@@ -2,7 +2,7 @@
  * In-Memory Distributed Lock.
  */
 
-import type { DistributedLock } from '../../shared/ports/DistributedLock';
+import type { DistributedLock } from '../../shared/ports/distributed-lock';
 
 interface LockEntry {
   key: string;

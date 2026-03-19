@@ -2,7 +2,7 @@
  * Field Redaction Policy
  */
 
-import type { Policy } from '../../../../shared/policies/Policy';
+import type { Policy } from '../../../../shared/policies/policy';
 
 interface RedactionInput {
   fieldName: string;

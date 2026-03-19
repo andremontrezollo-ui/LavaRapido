@@ -2,7 +2,7 @@
  * Secure Job Scheduler with distributed lock and state persistence.
  */
 
-import type { DistributedLock } from '../../shared/ports/DistributedLock';
+import type { DistributedLock } from '../../shared/ports/distributed-lock';
 import type { Logger } from '../../shared/logging';
 
 export type JobStatus = 'pending' | 'running' | 'completed' | 'failed' | 'dead_letter';

@@ -2,7 +2,7 @@
  * Logging Eligibility Policy
  */
 
-import type { Policy } from '../../../../shared/policies/Policy';
+import type { Policy } from '../../../../shared/policies/policy';
 import type { LogLevelType } from '../value-objects/log-level.vo';
 
 interface EligibilityInput {

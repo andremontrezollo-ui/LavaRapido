@@ -1,5 +1,5 @@
-export type { Policy } from './Policy';
-export type { ExplainablePolicy } from './ExplainablePolicy';
+export type { Policy } from './policy';
+export type { ExplainablePolicy } from './explainable-policy';
 export { IdempotencyGuard } from './idempotency-policy';
 export type { IdempotencyRecord, IdempotencyStore } from './idempotency-policy';
 export { ReplayProtectionPolicy } from './replay-protection-policy';

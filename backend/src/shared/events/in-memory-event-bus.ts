@@ -3,8 +3,8 @@
  * Suitable for single-process deployments; production would use a durable backing store.
  */
 
-import type { SystemEvent, EventType } from './DomainEvent';
-import type { EventBus, EventBusOptions, FailedEvent } from './EventBus';
+import type { SystemEvent, EventType } from './domain-event';
+import type { EventBus, EventBusOptions, FailedEvent } from './event-bus';
 import type { EventHandler } from './event-handler';
 import type { InboxStore } from './inbox-message';
 import { createInboxMessage } from './inbox-message';

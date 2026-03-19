@@ -3,7 +3,7 @@
  * Consumed conceptually by log-minimizer for audit logging.
  */
 
-import type { DomainEvent } from '../../../../shared/events/DomainEvent';
+import type { DomainEvent } from '../../../../shared/events/domain-event';
 
 export interface PaymentExecutedEvent extends DomainEvent {
   readonly type: 'PAYMENT_EXECUTED';

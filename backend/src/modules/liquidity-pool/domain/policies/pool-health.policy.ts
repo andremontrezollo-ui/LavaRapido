@@ -2,7 +2,7 @@
  * Pool Health Policy
  */
 
-import type { ExplainablePolicy } from '../../../../shared/policies/ExplainablePolicy';
+import type { ExplainablePolicy } from '../../../../shared/policies/explainable-policy';
 
 interface PoolHealthInput {
   utilizationRate: number;
