@@ -1,8 +1,9 @@
 /**
- * Structured Logger for Edge Functions
- * 
+ * Structured Logger for Edge Functions.
  * Privacy-preserving: redacts BTC addresses, IPs, emails.
  */
+
+export { generateRequestId } from "../../../backend/src/shared/utils/id-generator.ts";
 
 const REDACTION_PATTERNS = [
   /\b[13][a-km-zA-HJ-NP-Z1-9]{25,34}\b/g,
@@ -45,10 +46,4 @@ export function logWarn(message: string, ctx: LogContext): void {
 
 export function logError(message: string, ctx: LogContext): void {
   console.error(formatLog("error", message, ctx));
-}
-
-export function generateRequestId(): string {
-  const arr = new Uint8Array(8);
-  crypto.getRandomValues(arr);
-  return Array.from(arr, (b) => b.toString(16).padStart(2, "0")).join("");
 }

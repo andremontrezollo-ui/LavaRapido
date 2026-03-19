@@ -1,1 +1,0 @@
-export interface PoolHealthDto { readonly poolId: string; readonly status: string; readonly utilizationRate: number; readonly totalBalance: number; readonly availableBalance: number; readonly reservedBalance: number; readonly pendingObligations: number; }

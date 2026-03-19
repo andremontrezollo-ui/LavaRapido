@@ -1,8 +1,17 @@
 /**
- * Reusable Rate Limiter for Edge Functions
+ * Rate-limiter helpers for Edge Functions.
+ *
+ * For rate-limit storage, use SupabaseRateLimitRepository from:
+ *   ./_shared/adapters/rate-limit.repository.ts
+ *
+ * The functions below are kept for backward compatibility with the test file.
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { hashString } from "../../../backend/src/shared/utils/hash.ts";
+
+export type { RateLimitRepositoryPort } from "../../../backend/src/shared/ports/RateLimitRepository.ts";
+export { hashString };
 
 export interface RateLimitConfig {
   endpoint: string;
@@ -20,10 +29,9 @@ export interface RateLimitResult {
 export async function checkRateLimit(
   ipHash: string,
   config: RateLimitConfig,
-  supabase: ReturnType<typeof createClient>
+  supabase: ReturnType<typeof createClient>,
 ): Promise<RateLimitResult> {
   const windowStart = new Date(Date.now() - config.windowSeconds * 1000).toISOString();
-
   const { count } = await supabase
     .from("rate_limits")
     .select("*", { count: "exact", head: true })
@@ -45,16 +53,7 @@ export async function checkRateLimit(
 export async function recordRateLimit(
   ipHash: string,
   endpoint: string,
-  supabase: ReturnType<typeof createClient>
+  supabase: ReturnType<typeof createClient>,
 ): Promise<void> {
   await supabase.from("rate_limits").insert({ ip_hash: ipHash, endpoint });
-}
-
-export async function hashString(input: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(input);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(hashBuffer))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
 }

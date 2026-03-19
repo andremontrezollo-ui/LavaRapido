@@ -1,8 +1,8 @@
 /**
- * Backend Entry Point — exports all layers.
+ * Backend — official domain and application core for ShadowMix.
+ *
+ * Exports all modules and shared utilities.
+ * Consumed by supabase/functions/* as the single source of business logic.
  */
-
-export * from './shared';
-export * as infra from './infra';
-export * as api from './api';
-export * as modules from './modules';
+export * from './modules/index.ts';
+export * from './shared/index.ts';

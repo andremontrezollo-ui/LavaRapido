@@ -1,51 +1,97 @@
-# Welcome to ShadowMix
+# ShadowMix
 
-A privacy-focused Bitcoin mixing service built with React, TypeScript, and Tailwind CSS.
+A privacy-focused Bitcoin mixing service built with React, TypeScript, and Supabase Edge Functions.
 
-## Project Overview
+## Architecture
 
-ShadowMix is a web application that provides Bitcoin transaction privacy services through a mixing mechanism that breaks the link between input and output addresses.
+```
+┌─────────────────────────────────────────────────────────┐
+│  Frontend (src/)                                        │
+│  React SPA — UI only, no business logic                 │
+│  Calls supabase/functions/* via fetch                   │
+└────────────────────┬────────────────────────────────────┘
+                     │ HTTP
+┌────────────────────▼────────────────────────────────────┐
+│  supabase/functions/   (Edge Functions — HTTP adapters) │
+│  mix-sessions · mix-session-status · contact            │
+│  health · cleanup                                       │
+│  _shared/: security-headers, error-response, logger     │
+│  _shared/adapters/: Supabase repository implementations │
+└────────────────────┬────────────────────────────────────┘
+                     │ imports
+┌────────────────────▼────────────────────────────────────┐
+│  backend/src/          (Domain + Application core)      │
+│  modules/: mix-session · contact · health · cleanup     │
+│  shared/: errors · ports · utils · logging · policies   │
+└─────────────────────────────────────────────────────────┘
+```
 
-## Tech Stack
+### Layer responsibilities
 
-- **Frontend Framework**: React 18 with TypeScript
-- **Build Tool**: Vite
-- **Styling**: Tailwind CSS with custom design system
-- **UI Components**: shadcn/ui (Radix UI primitives)
-- **Routing**: React Router v6
-- **State Management**: React Query (TanStack Query)
-- **Form Validation**: Zod
+| Layer | Responsibility |
+|-------|---------------|
+| `src/` (frontend) | UI rendering, form handling, calling the API |
+| `supabase/functions/` | HTTP parsing, auth/rate-limit at edge, calling use cases, serialising responses |
+| `backend/src/` | Domain entities, use cases, port interfaces — **no HTTP, no Deno-specific code** |
+
+**Rule:** Business logic lives exclusively in `backend/src/`. Edge Functions are thin adapters only.
 
 ## Project Structure
 
 ```
-src/
-├── components/
-│   ├── home/           # Homepage sections
-│   ├── layout/         # Layout components (Header, Footer, Layout)
-│   ├── mixing/         # Mixing flow components
-│   └── ui/             # shadcn/ui components
-├── hooks/              # Custom React hooks
-├── lib/                # Utilities and configuration
-│   ├── constants.ts    # Application constants
-│   ├── utils.ts        # Utility functions
-│   └── validation.ts   # Input validation schemas
-├── pages/              # Page components
-└── test/               # Test configuration
+.
+├── src/                        # React SPA
+│   ├── components/             # UI components
+│   ├── hooks/                  # Custom React hooks
+│   ├── lib/                    # constants, validation, utils, API client
+│   └── pages/                  # Route pages
+│
+├── supabase/
+│   ├── functions/
+│   │   ├── _shared/            # Shared HTTP utilities + Supabase adapters
+│   │   │   ├── adapters/       # Supabase implementations of backend ports
+│   │   │   ├── security-headers.ts
+│   │   │   ├── error-response.ts
+│   │   │   ├── structured-logger.ts
+│   │   │   └── rate-limiter.ts
+│   │   ├── mix-sessions/       # POST — create mixing session
+│   │   ├── mix-session-status/ # POST — query session status
+│   │   ├── contact/            # POST — create support ticket
+│   │   ├── health/             # GET/POST — health check
+│   │   ├── cleanup/            # POST — expire sessions / prune rate limits
+│   │   └── tests/              # Integration tests (requires live Supabase)
+│   └── migrations/             # SQL schema migrations
+│
+├── backend/
+│   └── src/
+│       ├── modules/            # Domain modules (mix-session, contact, health, cleanup)
+│       └── shared/             # Shared ports, errors, utils, logging
+│
+└── docs/                       # Architecture and API contract documentation
 ```
 
-## Development
+## Tech Stack
+
+- **Frontend**: React 18, TypeScript, Vite, Tailwind CSS, shadcn/ui, React Query, Zod
+- **Backend logic**: Pure TypeScript (Deno-compatible, no runtime dependencies)
+- **API runtime**: Supabase Edge Functions (Deno)
+- **Database**: Supabase (PostgreSQL)
+
+## Getting Started
 
 ### Prerequisites
 
 - Node.js 18+ or Bun
-- npm, yarn, or bun
+- A [Supabase](https://supabase.com) project
 
-### Getting Started
+### Frontend
 
 ```bash
 # Install dependencies
 npm install
+
+# Copy and fill in environment variables
+cp .env.example .env
 
 # Start development server
 npm run dev
@@ -56,78 +102,59 @@ npm run build
 # Run tests
 npm test
 
-# Type checking
+# Type-check
 npm run typecheck
 
-# Linting
+# Lint
 npm run lint
 ```
 
 ### Environment Variables
 
-This project does not require any environment variables for frontend operation. All configuration is handled through `src/lib/constants.ts`.
+Copy `.env.example` to `.env` and fill in:
 
-For backend functionality (when implemented via Lovable Cloud):
-- API keys and secrets should be stored in Lovable Cloud secrets
-- Never commit secrets to the repository
+```env
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=your-anon-key
+```
 
-## Security Considerations
+See `.env.example` for full details.  
+**Never commit `.env` to source control.**
 
-### Input Validation
+### Edge Functions (local development)
 
-All user inputs are validated using Zod schemas:
-- Bitcoin addresses are validated against standard patterns (Legacy, P2SH, Bech32, Bech32m)
-- Contact form inputs are sanitized and length-limited
-- All validation occurs both client-side and server-side (when backend is implemented)
+```bash
+# Start Supabase locally
+supabase start
 
-### Best Practices Implemented
+# Serve functions locally
+supabase functions serve
 
-- ✅ No hardcoded secrets in codebase
-- ✅ Input sanitization and validation
-- ✅ XSS prevention through React's built-in escaping
-- ✅ Secure random ID generation using `crypto.getRandomValues()`
-- ✅ Proper TypeScript types for type safety
-- ✅ Component-level separation of concerns
-- ✅ Lazy loading for performance optimization
+# Set secrets for local run
+supabase secrets set SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=...
+```
 
-### Recommendations for Production
+### Running integration tests
 
-1. **Backend Security**: Implement server-side validation for all operations
-2. **Rate Limiting**: Add rate limiting for form submissions
-3. **CSP Headers**: Configure Content Security Policy headers
-4. **HTTPS**: Ensure all traffic is served over HTTPS
-5. **Monitoring**: Implement error tracking and monitoring
-6. **Auditing**: Regular security audits of dependencies
+The `supabase/functions/tests/` suite tests the live API.  
+Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` in your environment, then:
 
-## Deployment
+```bash
+deno test --allow-net --allow-env supabase/functions/tests/index.test.ts
+```
 
-The application can be deployed via Lovable's publish feature:
+## Security
 
-1. Open the project in Lovable
-2. Click Share → Publish
-3. Optionally configure a custom domain
+- `.env` is git-ignored — never commit real secrets
+- Service role key is only used inside Edge Functions (`SUPABASE_SERVICE_ROLE_KEY`), never in the frontend
+- All inputs are validated and sanitised in `backend/src/modules/*/application/use-cases/`
+- Rate limiting is enforced per IP-hash at the Edge Function level
+- All logs redact Bitcoin addresses, IPs, emails, and JWTs before emission
 
-## Architecture Principles
+## API Contract
 
-The project follows these architectural principles (documented in `docs/backend/`):
-
-- **Separation of Responsibilities**: Each module has a single purpose
-- **Low Coupling / High Cohesion**: Components communicate through well-defined interfaces
-- **Privacy by Architecture**: Minimal data collection and segregated contexts
-- **Security by Design**: Defense in depth, no secrets in application code
-- **Controlled Auditability**: Privacy-preserving logging
-
-## Contributing
-
-When contributing to this project:
-
-1. Follow the existing code style and conventions
-2. Add proper TypeScript types
-3. Validate all user inputs
-4. Use semantic design tokens from the design system
-5. Write meaningful commit messages
-6. Test your changes before submitting
+See [`docs/api-contract.md`](docs/api-contract.md) for the full API reference.
 
 ## License
 
-This project is proprietary. All rights reserved.
+Proprietary. All rights reserved.
