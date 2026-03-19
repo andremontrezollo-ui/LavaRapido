@@ -1,3 +1,18 @@
+/**
+ * @deprecated EDGE FUNCTION DEPRECATED — DO NOT ADD NEW LOGIC HERE.
+ *
+ * This function has been superseded by the Express/Node.js backend:
+ *   POST /api/v1/contact
+ *
+ * This file remains only as a temporary fallback during ETAPA 3 of the
+ * architectural migration. It will be removed in ETAPA 6.
+ *
+ * See ARCHITECTURE.md — Section 4: Plano de Migração, ETAPA 6.
+ *
+ * The canonical implementation now lives at:
+ *   backend/src/api/routes/contact.route.ts
+ */
+
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { jsonResponse, corsResponse } from "../_shared/security-headers.ts";
 import { validationError, rateLimitError, internalError, methodNotAllowed, errorResponse, ErrorCodes } from "../_shared/error-response.ts";

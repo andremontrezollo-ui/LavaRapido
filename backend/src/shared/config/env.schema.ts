@@ -14,6 +14,8 @@ interface EnvSchema {
 
 const SCHEMA: EnvSchema[] = [
   { key: 'APP_ENV', required: false, type: 'string', configKey: 'env' },
+  { key: 'PORT', required: false, type: 'number', configKey: 'port' },
+  { key: 'HOST', required: false, type: 'string', configKey: 'host' },
   { key: 'SUPABASE_URL', required: true, type: 'string', configKey: 'supabaseUrl' },
   { key: 'SUPABASE_ANON_KEY', required: true, type: 'string', configKey: 'supabaseAnonKey' },
   { key: 'SUPABASE_SERVICE_ROLE_KEY', required: true, type: 'string', configKey: 'supabaseServiceRoleKey' },

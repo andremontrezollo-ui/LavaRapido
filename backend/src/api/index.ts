@@ -1,6 +1,9 @@
 /**
- * API Layer — exports all controllers, middlewares, schemas, and security.
+ * API Layer — exports all controllers, middlewares, schemas, security, and router.
  */
+
+// Router
+export { createRouter } from './router';
 
 // Controllers
 export { HealthController } from './controllers/health.controller';
