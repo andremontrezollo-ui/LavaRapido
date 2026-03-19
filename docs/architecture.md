@@ -1,5 +1,7 @@
 # ShadowMix — Architecture Document
 
+> **Decisão Arquitetural Definitiva (ADR-001):** O runtime HTTP oficial é **Supabase Edge Functions (Deno)**. O diretório `backend/src/` é uma biblioteca de domínio puro (sem servidor, sem I/O direto). Não existe servidor Node.js/Express intermediário. Ver `backend/ARCHITECTURE.md` para o raciocínio completo.
+
 ## Overview
 
 ShadowMix follows **Clean Architecture + Domain-Driven Design (DDD)** with strict module boundaries and event-driven inter-module communication.
@@ -7,35 +9,42 @@ ShadowMix follows **Clean Architecture + Domain-Driven Design (DDD)** with stric
 ## Module Diagram
 
 ```
-┌────────────────────────────────────────────────────────┐
-│                      API Layer                         │
-│  (Edge Functions: mix-sessions, contact, health, etc.) │
-└───────────────┬───────────────────────┬────────────────┘
-                │                       │
-       ┌────────▼────────┐     ┌────────▼────────┐
-       │  Application    │     │  Application    │
-       │  (Use Cases)    │     │  (Use Cases)    │
-       └────────┬────────┘     └────────┬────────┘
-                │                       │
-       ┌────────▼────────┐     ┌────────▼────────┐
-       │  Domain          │     │  Domain          │
-       │  (Entities,      │     │  (Entities,      │
-       │   Value Objects, │     │   Value Objects, │
-       │   Policies,      │     │   Policies,      │
-       │   Events)        │     │   Events)        │
-       └─────────────────┘     └─────────────────┘
-                │                       │
-       ┌────────▼───────────────────────▼────────┐
-       │              Shared Kernel               │
-       │  (DomainEvent, EventBus, ErrorResponse,  │
-       │   Ports, Policies base, Result types)    │
-       └──────────────────┬──────────────────────┘
-                          │
-       ┌──────────────────▼──────────────────────┐
-       │           Infrastructure                 │
-       │  (EventBus impl, Logger, KV Store,       │
-       │   Security Headers, Metrics)             │
-       └─────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│              HTTP Entry Layer (Deno runtime)              │
+│         Supabase Edge Functions — supabase/functions/     │
+│                                                           │
+│  mix-sessions  mix-session-status  contact  health  cleanup│
+│              └──────────────┬──────────────────┘         │
+│                              │                            │
+│                 supabase/functions/_shared/               │
+│           security-headers  error-response  rate-limiter  │
+└──────────────────────────────┬────────────────────────────┘
+                               │
+┌──────────────────────────────▼────────────────────────────┐
+│           Domain / Application Library                    │
+│                   backend/src/                            │
+│                                                           │
+│  modules/                       shared/                   │
+│    address-generator              events/ (EventBus)      │
+│    blockchain-monitor             policies/ (base)        │
+│    liquidity-pool                 ports/ (Repository…)    │
+│    payment-scheduler              logging/ (Logger)       │
+│    log-minimizer                  config/ (AppConfig)     │
+│                                                           │
+│  infra/                                                   │
+│    persistence/ (in-memory stores)                        │
+│    saga/ (SagaOrchestrator)                               │
+│    scheduler/ (SecureJobScheduler)                        │
+│    observability/ (StructuredLogger)                      │
+└──────────────────────────────┬────────────────────────────┘
+                               │
+┌──────────────────────────────▼────────────────────────────┐
+│                      Data Layer                           │
+│               Supabase / PostgreSQL                       │
+│                                                           │
+│  mix_sessions  contact_tickets  rate_limits               │
+│  RLS policies  pg_cron cleanup  migrations                │
+└───────────────────────────────────────────────────────────┘
 ```
 
 ## Modules
@@ -70,13 +79,15 @@ address-generator ──► EventBus ──► blockchain-monitor
 ## Dependency Rules
 
 ```
-Domain ──► (nothing external)
+Domain      ──► (nothing — zero external dependencies)
 Application ──► Domain, Shared Ports
 Infrastructure ──► Application (implements ports), Domain
-API ──► Application (orchestrates use cases)
+Edge Function  ──► Application (orchestrates use cases via ports)
 ```
 
-**Domain MUST NOT depend on Infrastructure.**
+**Domain MUST NOT depend on Infrastructure, Supabase, or any I/O.**
+
+**Edge Functions MUST NOT contain business logic — only HTTP glue.**
 
 ## Policy Objects
 
@@ -91,6 +102,8 @@ Complex business rules are encapsulated in policy objects:
 | `RateLimitPolicy` | payment-scheduler/domain/policies | Rate limit evaluation |
 
 ## Edge Functions (Runtime)
+
+> **These are the ONLY HTTP entry points.** No Node.js server exists or should ever exist in this project.
 
 | Function | Method | Purpose |
 |----------|--------|---------|
@@ -107,3 +120,7 @@ All Edge Functions use shared utilities from `_shared/`:
 - `error-response.ts` — Standardized error format
 - `structured-logger.ts` — Privacy-preserving structured logs
 - `rate-limiter.ts` — Reusable rate limiting logic
+
+## Architectural Decision Record
+
+The full architectural analysis, migration rationale, mandatory rules, and validation checklist are documented in [`backend/ARCHITECTURE.md`](../backend/ARCHITECTURE.md).
