@@ -2,7 +2,7 @@
  * Log Retention Policy
  */
 
-import type { ExplainablePolicy } from '../../../../shared/policies/ExplainablePolicy';
+import type { ExplainablePolicy } from '../../../../shared/policies/explainable-policy';
 import type { ClassificationType } from '../value-objects/sensitivity-classification.vo';
 
 interface RetentionInput {

@@ -10,7 +10,7 @@ import { createTokenIssuedEvent } from '../../domain/events/token-issued.event';
 import type { AddressRepository } from '../ports/address-repository.port';
 import type { TokenRepository } from '../ports/token-repository.port';
 import type { RandomGenerator } from '../ports/random-generator.port';
-import type { EventPublisher } from '../../../../shared/ports';
+import type { AddressEventPublisher } from '../ports/event-publisher.port';
 
 export interface IssueTokenRequest {
   readonly addressId: string;
@@ -27,7 +27,7 @@ export class IssueAddressTokenUseCase {
     private readonly addressRepo: AddressRepository,
     private readonly tokenRepo: TokenRepository,
     private readonly randomGenerator: RandomGenerator,
-    private readonly eventPublisher: EventPublisher
+    private readonly eventPublisher: AddressEventPublisher
   ) {}
 
   async execute(request: IssueTokenRequest): Promise<IssueTokenResponse> {

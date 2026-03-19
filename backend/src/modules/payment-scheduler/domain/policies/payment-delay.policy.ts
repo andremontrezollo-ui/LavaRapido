@@ -1,4 +1,4 @@
-import type { ExplainablePolicy } from '../../../../shared/policies/ExplainablePolicy';
+import type { ExplainablePolicy } from '../../../../shared/policies/explainable-policy';
 
 interface DelayInput {
   amount: number;

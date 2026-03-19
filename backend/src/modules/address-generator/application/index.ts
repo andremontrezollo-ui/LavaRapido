@@ -17,3 +17,4 @@ export type { GenerateAddressResponse } from './dtos/generate-address.response';
 export type { AddressRepository } from './ports/address-repository.port';
 export type { TokenRepository } from './ports/token-repository.port';
 export type { RandomGenerator } from './ports/random-generator.port';
+export type { AddressEventPublisher } from './ports/event-publisher.port';

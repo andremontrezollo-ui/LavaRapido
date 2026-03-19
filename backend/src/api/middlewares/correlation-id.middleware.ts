@@ -2,7 +2,7 @@
  * Correlation ID Middleware — injects or propagates correlation IDs.
  */
 
-import type { IdGenerator } from '../../shared/ports/IdGenerator';
+import type { IdGenerator } from '../../shared/ports/id-generator';
 
 export class CorrelationIdMiddleware {
   constructor(private readonly idGenerator: IdGenerator) {}

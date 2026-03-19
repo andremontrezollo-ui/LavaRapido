@@ -1,4 +1,4 @@
-export type { ErrorDetail, ErrorResponse, ErrorCode } from './ErrorResponse';
+export type { ErrorDetail, ErrorResponse, ErrorCode } from './error-response';
 export {
   ErrorCodes,
   createErrorResponse,
@@ -7,9 +7,9 @@ export {
   rateLimitedError,
   internalError,
   methodNotAllowed,
-} from './ErrorResponse';
-export { HttpStatus } from './HttpStatus';
-export type { HttpStatusCode } from './HttpStatus';
+} from './error-response';
+export { HttpStatus } from './http-status';
+export type { HttpStatusCode } from './http-status';
 export type { RequestContext } from './request-context';
 export { createRequestContext } from './request-context';
 export type { ApiResponse } from './api-response';

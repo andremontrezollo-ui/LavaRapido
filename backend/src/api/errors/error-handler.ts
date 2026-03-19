@@ -3,7 +3,7 @@
  */
 
 import { errorResponse } from '../../shared/http/api-response';
-import { HttpStatus } from '../../shared/http/HttpStatus';
+import { HttpStatus } from '../../shared/http/http-status';
 import type { Logger } from '../../shared/logging';
 
 interface ErrorMapping {

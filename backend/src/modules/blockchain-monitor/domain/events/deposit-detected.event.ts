@@ -2,7 +2,7 @@
  * DepositDetected Domain Event
  */
 
-import type { DomainEvent } from '../../../../shared/events/DomainEvent';
+import type { DomainEvent } from '../../../../shared/events/domain-event';
 
 export interface DepositDetectedEvent extends DomainEvent {
   readonly type: 'DEPOSIT_DETECTED';

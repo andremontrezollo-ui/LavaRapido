@@ -5,7 +5,7 @@
  * Compatible with the shared EventBus (SystemEvent union).
  */
 
-import type { DomainEvent } from '../../../../shared/events/DomainEvent';
+import type { DomainEvent } from '../../../../shared/events/domain-event';
 
 export interface AddressGeneratedEvent extends DomainEvent {
   readonly type: 'ADDRESS_TOKEN_EMITTED';

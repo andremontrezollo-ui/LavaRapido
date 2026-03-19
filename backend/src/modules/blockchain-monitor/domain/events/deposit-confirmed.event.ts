@@ -4,7 +4,7 @@
  * Consumed conceptually by liquidity-pool module.
  */
 
-import type { DomainEvent } from '../../../../shared/events/DomainEvent';
+import type { DomainEvent } from '../../../../shared/events/domain-event';
 
 export interface DepositConfirmedEvent extends DomainEvent {
   readonly type: 'DEPOSIT_CONFIRMED';

@@ -2,7 +2,7 @@
  * Confirmation Threshold Policy
  */
 
-import type { Policy } from '../../../../shared/policies/Policy';
+import type { Policy } from '../../../../shared/policies/policy';
 
 interface ConfirmationInput {
   confirmations: number;

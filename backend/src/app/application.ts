@@ -1,8 +1,8 @@
 import { createServer } from 'http';
-import { Application } from './types';
-import { DependencyContainer } from './dependency-container';
-import { Logger } from '../shared/logging/secure-logger';
-import { AppConfig } from '../shared/config/app-config';
+import type { Application } from './types';
+import type { DependencyContainer } from './dependency-container';
+import type { Logger } from '../shared/logging';
+import type { AppConfig } from '../shared/config/app-config';
 
 export class ApplicationService implements Application {
     private httpServer: ReturnType<typeof createServer> | null = null;

@@ -2,7 +2,7 @@
  * Allocation Policy
  */
 
-import type { Policy } from '../../../../shared/policies/Policy';
+import type { Policy } from '../../../../shared/policies/policy';
 
 interface AllocationInput {
   requestedAmount: number;

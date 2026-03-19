@@ -6,7 +6,7 @@ import type { ScheduledPaymentRepository } from '../ports/scheduled-payment-repo
 import type { PaymentEventPublisher } from '../ports/event-publisher.port';
 import type { PaymentClock } from '../ports/clock.port';
 import type { IdempotencyStore } from '../../../../shared/policies/idempotency-policy';
-import type { DistributedLock } from '../../../../shared/ports/DistributedLock';
+import type { DistributedLock } from '../../../../shared/ports/distributed-lock';
 import { createPaymentExecutedEvent } from '../../domain/events/payment-executed.event';
 import { PaymentAlreadyExecutedError } from '../../domain/errors/payment-already-executed.error';
 import { IdempotencyGuard } from '../../../../shared/policies/idempotency-policy';

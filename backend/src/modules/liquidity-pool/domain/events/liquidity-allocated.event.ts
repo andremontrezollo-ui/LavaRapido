@@ -1,4 +1,4 @@
-import type { DomainEvent } from '../../../../shared/events/DomainEvent';
+import type { DomainEvent } from '../../../../shared/events/domain-event';
 
 export interface LiquidityAllocatedEvent extends DomainEvent {
   readonly type: 'LIQUIDITY_ALLOCATED';

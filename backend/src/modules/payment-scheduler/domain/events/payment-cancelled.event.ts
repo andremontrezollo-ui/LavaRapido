@@ -1,4 +1,4 @@
-import type { DomainEvent } from '../../../../shared/events/DomainEvent';
+import type { DomainEvent } from '../../../../shared/events/domain-event';
 
 export interface PaymentCancelledEvent extends DomainEvent {
   readonly type: 'PAYMENT_CANCELLED';

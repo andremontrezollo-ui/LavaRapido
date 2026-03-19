@@ -2,7 +2,7 @@
  * Reorg Tolerance Policy
  */
 
-import type { Policy } from '../../../../shared/policies/Policy';
+import type { Policy } from '../../../../shared/policies/policy';
 
 interface ReorgInput {
   previousBlockHeight: number;
