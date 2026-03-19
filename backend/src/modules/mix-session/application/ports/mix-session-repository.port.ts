@@ -4,7 +4,7 @@
  * Implemented by infrastructure adapters (e.g. Supabase).
  */
 
-import type { MixSession } from '../entities/mix-session.entity';
+import type { MixSession } from '../../domain/entities/mix-session.entity';
 
 export interface CreateMixSessionParams {
   depositAddress: string;

@@ -7,7 +7,7 @@
 
 import type { Result } from '../../../shared';
 import { success, failure } from '../../../shared';
-import { InvalidContactPayloadError } from '../domain/errors/invalid-contact-payload.error';
+import { InvalidContactPayloadError } from '../../domain/errors/invalid-contact-payload.error';
 import type { ContactRepository } from '../ports/contact-repository.port';
 import type { CreateContactTicketRequest } from '../dtos/create-contact-ticket.request';
 import type { ContactTicketResponse } from '../dtos/contact-ticket.response';

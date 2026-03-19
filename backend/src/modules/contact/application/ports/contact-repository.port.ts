@@ -4,7 +4,7 @@
  * Implemented by infrastructure adapters (e.g. Supabase).
  */
 
-import type { ContactTicket } from '../entities/contact-ticket.entity';
+import type { ContactTicket } from '../../domain/entities/contact-ticket.entity';
 
 export interface CreateContactTicketParams {
   ticketId: string;
