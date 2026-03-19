@@ -1,15 +1,19 @@
 /**
- * Mix Session Status Lookup
+ * Mix Session Status — HTTP Entry Point
  * POST /functions/v1/mix-session-status
  * Body: { sessionId: "uuid" }
+ *
+ * Parses the request, validates UUID format, then delegates to the
+ * GetSessionStatus use case. All business logic lives in
+ * _shared/use-cases/get-session-status.usecase.ts.
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { jsonResponse, corsResponse } from "../_shared/security-headers.ts";
 import { validationError, notFoundError, internalError, methodNotAllowed } from "../_shared/error-response.ts";
 import { logInfo, logError, generateRequestId } from "../_shared/structured-logger.ts";
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { isValidSessionId, getSessionStatusUseCase } from "../_shared/use-cases/get-session-status.usecase.ts";
+import { createSupabaseMixSessionRepository } from "../_shared/adapters/supabase-mix-session.adapter.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return corsResponse();
@@ -29,47 +33,28 @@ Deno.serve(async (req) => {
     if (!body || typeof body !== "object") return validationError("Invalid request body");
     const { sessionId } = body as Record<string, unknown>;
 
-    if (typeof sessionId !== "string" || !UUID_RE.test(sessionId)) {
+    if (typeof sessionId !== "string" || !isValidSessionId(sessionId)) {
       return validationError("Invalid session ID format. Must be a valid UUID.");
     }
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    const { data, error } = await supabase
-      .from("mix_sessions")
-      .select("id, status, expires_at, created_at")
-      .eq("id", sessionId)
-      .single();
+    const result = await getSessionStatusUseCase(
+      sessionId,
+      createSupabaseMixSessionRepository(supabase),
+    );
 
-    if (error || !data) {
+    if (!result.found) {
       logInfo("Session not found", { requestId, endpoint: "mix-session-status", status: 404, latencyMs: Date.now() - startTime });
       return notFoundError("Session not found");
     }
 
-    // Check if expired
-    const isExpired = new Date(data.expires_at) < new Date();
-    const status = isExpired ? "expired" : data.status;
-
-    // Update status in DB if expired
-    if (isExpired && data.status !== "expired") {
-      await supabase
-        .from("mix_sessions")
-        .update({ status: "expired" })
-        .eq("id", sessionId);
-    }
-
     logInfo("Session status queried", { requestId, endpoint: "mix-session-status", status: 200, latencyMs: Date.now() - startTime });
-
-    return jsonResponse({
-      sessionId: data.id,
-      status,
-      expiresAt: data.expires_at,
-      createdAt: data.created_at,
-    }, 200);
-  } catch (err) {
+    return jsonResponse(result.session, 200);
+  } catch {
     logError("Unexpected error", { requestId, endpoint: "mix-session-status", status: 500, latencyMs: Date.now() - startTime });
     return internalError();
   }

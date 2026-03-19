@@ -1,14 +1,18 @@
 /**
- * Cleanup Job
- * 
- * Deletes expired mix_sessions and old rate_limits records.
+ * Cleanup Job — HTTP Entry Point
+ *
  * Triggered via pg_cron or manual invocation.
+ * Delegates all cleanup logic to the RunCleanup use case.
+ * All business logic lives in _shared/use-cases/run-cleanup.usecase.ts.
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { jsonResponse, corsResponse } from "../_shared/security-headers.ts";
 import { internalError, methodNotAllowed } from "../_shared/error-response.ts";
 import { logInfo, logError, generateRequestId } from "../_shared/structured-logger.ts";
+import { runCleanupUseCase } from "../_shared/use-cases/run-cleanup.usecase.ts";
+import { createSupabaseMixSessionRepository } from "../_shared/adapters/supabase-mix-session.adapter.ts";
+import { createSupabaseRateLimitRepository } from "../_shared/adapters/supabase-rate-limit.adapter.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return corsResponse();
@@ -20,43 +24,25 @@ Deno.serve(async (req) => {
   try {
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    const now = new Date().toISOString();
-
-    // 1. Mark expired sessions
-    const { count: expiredSessions } = await supabase
-      .from("mix_sessions")
-      .update({ status: "expired" })
-      .eq("status", "active")
-      .lt("expires_at", now)
-      .select("*", { count: "exact", head: true });
-
-    // 2. Delete rate limit records older than 1 hour
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-    const { count: deletedRateLimits } = await supabase
-      .from("rate_limits")
-      .delete()
-      .lt("created_at", oneHourAgo)
-      .select("*", { count: "exact", head: true });
+    const result = await runCleanupUseCase(
+      createSupabaseMixSessionRepository(supabase),
+      createSupabaseRateLimitRepository(supabase),
+    );
 
     logInfo("Cleanup completed", {
       requestId,
       endpoint: "cleanup",
       status: 200,
       latencyMs: Date.now() - startTime,
-      expiredSessions: expiredSessions ?? 0,
-      deletedRateLimits: deletedRateLimits ?? 0,
+      expiredSessions: result.expiredSessions,
+      deletedRateLimits: result.deletedRateLimits,
     });
 
-    return jsonResponse({
-      status: "ok",
-      expiredSessions: expiredSessions ?? 0,
-      deletedRateLimits: deletedRateLimits ?? 0,
-      timestamp: new Date().toISOString(),
-    }, 200);
-  } catch (err) {
+    return jsonResponse({ status: "ok", ...result, timestamp: new Date().toISOString() }, 200);
+  } catch {
     logError("Cleanup failed", { requestId, endpoint: "cleanup", status: 500, latencyMs: Date.now() - startTime });
     return internalError();
   }

@@ -19,19 +19,53 @@ ShadowMix is a web application that provides Bitcoin transaction privacy service
 ## Project Structure
 
 ```
-src/
+src/                    ← Frontend (React + TypeScript + Vite)
 ├── components/
 │   ├── home/           # Homepage sections
 │   ├── layout/         # Layout components (Header, Footer, Layout)
 │   ├── mixing/         # Mixing flow components
 │   └── ui/             # shadcn/ui components
 ├── hooks/              # Custom React hooks
-├── lib/                # Utilities and configuration
+├── lib/                # Utilities and API client
+│   ├── api.ts          # Edge Function client (HTTP only)
 │   ├── constants.ts    # Application constants
 │   ├── utils.ts        # Utility functions
 │   └── validation.ts   # Input validation schemas
 ├── pages/              # Page components
 └── test/               # Test configuration
+
+supabase/               ← Supabase project (Edge Functions + migrations)
+├── functions/
+│   ├── mix-sessions/   # POST — create mixing session
+│   ├── mix-session-status/ # POST — query session status
+│   ├── contact/        # POST — submit support ticket
+│   ├── health/         # GET/POST — health check
+│   ├── cleanup/        # POST — expire sessions, prune rate limits
+│   └── _shared/        # Shared runtime modules (Deno)
+│       ├── use-cases/  # Business logic (single source of truth)
+│       ├── ports/      # Repository/service interfaces
+│       ├── adapters/   # Supabase concrete implementations
+│       ├── security-headers.ts
+│       ├── error-response.ts
+│       ├── structured-logger.ts
+│       └── rate-limiter.ts (IP hashing)
+└── migrations/         # Database migrations
+
+backend/                ← Domain core (Node.js/TypeScript)
+└── src/
+    ├── modules/
+    │   ├── mix-session/       # Mix session lifecycle domain
+    │   ├── contact/           # Contact/support ticket domain
+    │   ├── address-generator/ # Unique deposit address tokens
+    │   ├── blockchain-monitor/# Blockchain event ingestion
+    │   ├── deposit-saga/      # Deposit processing orchestration
+    │   ├── liquidity-pool/    # Fund aggregation layer
+    │   ├── log-minimizer/     # Privacy-preserving logging
+    │   └── payment-scheduler/ # Payment scheduling and batching
+    ├── shared/         # Shared kernel (EventBus, ports, Result types)
+    ├── infra/          # Infrastructure adapters
+    ├── api/            # HTTP controllers and middleware
+    └── app/            # Application bootstrap
 ```
 
 ## Development
@@ -65,11 +99,16 @@ npm run lint
 
 ### Environment Variables
 
-This project does not require any environment variables for frontend operation. All configuration is handled through `src/lib/constants.ts`.
+**Frontend** (`src/`):
+- `VITE_SUPABASE_URL` — Supabase project URL (public)
+- `VITE_SUPABASE_PUBLISHABLE_KEY` — Supabase anon/public key (public)
 
-For backend functionality (when implemented via Lovable Cloud):
-- API keys and secrets should be stored in Lovable Cloud secrets
-- Never commit secrets to the repository
+**Edge Functions** (`supabase/functions/`): Automatically injected by Supabase runtime:
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+**Backend** (`backend/`): See `backend/.env.example` for all required variables.
+Never commit `.env` files — they are protected by `.gitignore`.
 
 ## Security Considerations
 
@@ -109,13 +148,13 @@ The application can be deployed via Lovable's publish feature:
 
 ## Architecture Principles
 
-The project follows these architectural principles (documented in `docs/backend/`):
+The project follows these architectural principles (documented in `docs/architecture.md`):
 
-- **Separation of Responsibilities**: Each module has a single purpose
-- **Low Coupling / High Cohesion**: Components communicate through well-defined interfaces
-- **Privacy by Architecture**: Minimal data collection and segregated contexts
-- **Security by Design**: Defense in depth, no secrets in application code
-- **Controlled Auditability**: Privacy-preserving logging
+- **Single Backend Core**: Business logic lives in `supabase/functions/_shared/use-cases/`; Edge Functions are thin HTTP handlers only
+- **Port/Adapter Pattern**: All persistence is abstracted behind interfaces in `_shared/ports/`; Supabase adapters in `_shared/adapters/` are the sole concrete implementations
+- **Separation of Responsibilities**: `src/` = frontend; `supabase/functions/` = HTTP entry; `backend/` = domain model
+- **Privacy by Architecture**: Minimal data collection, segregated contexts, structured redaction logging
+- **Security by Design**: Defense in depth, no secrets in application code, `service_role_key` used only in Edge Functions (server-side)
 
 ## Contributing
 
