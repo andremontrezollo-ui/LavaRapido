@@ -1,17 +1,19 @@
+/**
+ * Mix Sessions — HTTP Entry Point
+ * POST /functions/v1/mix-sessions
+ *
+ * Parses the request, extracts IP, then delegates to the CreateMixSession use case.
+ * All business logic lives in _shared/use-cases/create-mix-session.usecase.ts.
+ */
+
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { jsonResponse, corsResponse } from "../_shared/security-headers.ts";
 import { rateLimitError, internalError, methodNotAllowed } from "../_shared/error-response.ts";
-import { checkRateLimit, recordRateLimit, hashString } from "../_shared/rate-limiter.ts";
+import { hashString } from "../_shared/rate-limiter.ts";
 import { logInfo, logWarn, logError, generateRequestId } from "../_shared/structured-logger.ts";
-
-const TESTNET_CHARSET = "0123456789abcdefghijklmnopqrstuvwxyz";
-
-function generateMockTestnetAddress(): string {
-  const body = new Uint8Array(38);
-  crypto.getRandomValues(body);
-  const encoded = Array.from(body, (b) => TESTNET_CHARSET[b % TESTNET_CHARSET.length]).join("");
-  return `tb1q${encoded.slice(0, 38)}`;
-}
+import { createMixSessionUseCase } from "../_shared/use-cases/create-mix-session.usecase.ts";
+import { createSupabaseMixSessionRepository } from "../_shared/adapters/supabase-mix-session.adapter.ts";
+import { createSupabaseRateLimitRepository } from "../_shared/adapters/supabase-rate-limit.adapter.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return corsResponse();
@@ -26,49 +28,23 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // Rate limit: max 10 sessions per 10 minutes per IP
-    const rl = await checkRateLimit(ipHash, { endpoint: "mix-sessions", maxRequests: 10, windowSeconds: 600 }, supabase);
+    const result = await createMixSessionUseCase(
+      { ipHash },
+      createSupabaseMixSessionRepository(supabase),
+      createSupabaseRateLimitRepository(supabase),
+    );
 
-    if (!rl.allowed) {
+    if (!result.allowed) {
       logWarn("Rate limit triggered", { requestId, endpoint: "mix-sessions", rateLimitTriggered: true, status: 429 });
-      return rateLimitError(rl.retryAfterSeconds);
-    }
-
-    await recordRateLimit(ipHash, "mix-sessions", supabase);
-
-    const now = new Date();
-    const expiresAt = new Date(now.getTime() + 30 * 60 * 1000);
-    const depositAddress = generateMockTestnetAddress();
-
-    const { data, error } = await supabase
-      .from("mix_sessions")
-      .insert({
-        deposit_address: depositAddress,
-        status: "active",
-        expires_at: expiresAt.toISOString(),
-        client_fingerprint_hash: ipHash,
-      })
-      .select("id, deposit_address, created_at, expires_at, status")
-      .single();
-
-    if (error) {
-      logError("DB error creating session", { requestId, endpoint: "mix-sessions", status: 500, latencyMs: Date.now() - startTime });
-      return internalError();
+      return rateLimitError(result.retryAfterSeconds);
     }
 
     logInfo("Session created", { requestId, endpoint: "mix-sessions", status: 201, latencyMs: Date.now() - startTime });
-
-    return jsonResponse({
-      sessionId: data.id,
-      depositAddress: data.deposit_address,
-      createdAt: data.created_at,
-      expiresAt: data.expires_at,
-      status: data.status,
-    }, 201);
-  } catch (err) {
+    return jsonResponse(result.session, 201);
+  } catch {
     logError("Unexpected error", { requestId, endpoint: "mix-sessions", status: 500, latencyMs: Date.now() - startTime });
     return internalError();
   }
