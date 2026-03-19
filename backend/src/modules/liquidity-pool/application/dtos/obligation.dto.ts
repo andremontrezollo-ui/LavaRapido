@@ -1,1 +1,0 @@
-export interface ObligationDto { readonly obligationId: string; readonly poolId: string; readonly amount: number; readonly status: string; readonly createdAt: string; readonly resolvedAt: string | null; }
