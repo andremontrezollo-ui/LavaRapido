@@ -1,4 +1,5 @@
 import { createServer } from 'http';
+import { randomUUID } from 'crypto';
 import { Application } from './types';
 import { DependencyContainer } from './dependency-container';
 import { Logger } from '../shared/logging/secure-logger';
@@ -26,7 +27,7 @@ export class ApplicationService implements Application {
         });
 
         this.httpServer = createServer(async (req, res) => {
-            const requestId = req.headers['x-request-id'] as string || require('crypto').randomUUID();
+            const requestId = req.headers['x-request-id'] as string || randomUUID();
             res.setHeader('X-Request-ID', requestId);
             res.setHeader('X-Content-Type-Options', 'nosniff');
             res.setHeader('X-Frame-Options', 'DENY');

@@ -46,7 +46,7 @@ export function sanitizeInput(input: string): string {
     // Remove null bytes
     .replace(/\0/g, "")
     // Remove control characters except newlines and tabs
-    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "")
+    .replace(/[\u0001-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")
     // Limit consecutive whitespace
     .replace(/\s{3,}/g, "  ");
 }

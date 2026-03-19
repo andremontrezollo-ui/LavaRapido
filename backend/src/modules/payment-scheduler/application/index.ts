@@ -58,12 +58,13 @@ export class PlanPaymentUseCase {
         scheduledFor = now;
         window = createTimeWindow(now, 60); // 1 minute window
         break;
-      case 'delayed':
+      case 'delayed': {
         const delay = policy.minDelaySeconds ?? 300;
         scheduledFor = new Date(now.getTime() + delay * 1000);
         window = createTimeWindow(scheduledFor, 60);
         break;
-      case 'random-window':
+      }
+      case 'random-window': {
         const randomDelay = calculateRandomDelay(
           policy.minDelaySeconds ?? 300,
           policy.maxDelaySeconds ?? 3600
@@ -74,6 +75,7 @@ export class PlanPaymentUseCase {
           policy.maxDelaySeconds ?? 3600
         );
         break;
+      }
     }
 
     const payment: ScheduledPayment = {
