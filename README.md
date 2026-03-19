@@ -38,14 +38,18 @@ src/
 
 ### Prerequisites
 
-- Node.js 18+ or Bun
-- npm, yarn, or bun
+- Node.js 18+
+- npm (recommended — this is the primary package manager for this project)
 
 ### Getting Started
 
 ```bash
 # Install dependencies
 npm install
+
+# Copy environment template and fill in values
+cp .env.example .env
+# Edit .env with your Supabase project credentials
 
 # Start development server
 npm run dev
@@ -65,11 +69,19 @@ npm run lint
 
 ### Environment Variables
 
-This project does not require any environment variables for frontend operation. All configuration is handled through `src/lib/constants.ts`.
+The frontend requires the following environment variables (set in `.env`, **never commit real values**):
 
-For backend functionality (when implemented via Lovable Cloud):
-- API keys and secrets should be stored in Lovable Cloud secrets
-- Never commit secrets to the repository
+| Variable | Description |
+|---|---|
+| `VITE_SUPABASE_URL` | Supabase project URL (e.g. `https://<ref>.supabase.co`) |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Supabase anonymous/public key (safe for browser) |
+| `VITE_SUPABASE_PROJECT_ID` | Supabase project reference ID |
+
+Copy `.env.example` to `.env` and fill in the values from your Supabase project dashboard (Settings → API).
+
+> **Note**: `VITE_SUPABASE_PUBLISHABLE_KEY` is the `anon` key, which is intentionally public-facing and safe to use in the browser. It is still a credential that should not be committed to source control.
+
+For backend functionality, see `backend/.env.example` for the full list of required backend variables.
 
 ## Security Considerations
 
@@ -82,7 +94,7 @@ All user inputs are validated using Zod schemas:
 
 ### Best Practices Implemented
 
-- ✅ No hardcoded secrets in codebase
+- ✅ `.env` excluded from version control (see `.env.example` for template)
 - ✅ Input sanitization and validation
 - ✅ XSS prevention through React's built-in escaping
 - ✅ Secure random ID generation using `crypto.getRandomValues()`
