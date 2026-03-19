@@ -12,6 +12,7 @@ export const ErrorCodes = {
   METHOD_NOT_ALLOWED: "METHOD_NOT_ALLOWED",
   BAD_REQUEST: "BAD_REQUEST",
   SESSION_EXPIRED: "SESSION_EXPIRED",
+  UNAUTHORIZED: "UNAUTHORIZED",
 } as const;
 
 export function errorResponse(
@@ -41,6 +42,10 @@ export function rateLimitError(retryAfterSeconds: number): Response {
 
 export function internalError(): Response {
   return errorResponse(500, ErrorCodes.INTERNAL_ERROR, "Internal server error");
+}
+
+export function unauthorizedError(message = "Unauthorized"): Response {
+  return errorResponse(401, ErrorCodes.UNAUTHORIZED, message);
 }
 
 export function methodNotAllowed(): Response {
