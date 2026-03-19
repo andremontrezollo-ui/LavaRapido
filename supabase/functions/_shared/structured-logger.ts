@@ -1,54 +1,34 @@
 /**
- * Structured Logger for Edge Functions
- * 
- * Privacy-preserving: redacts BTC addresses, IPs, emails.
+ * Structured Logger for Edge Functions — HTTP entry layer
+ *
+ * Wraps the CORE backend logger
+ * (backend/src/infra/observability/StructuredLogger.ts) with the
+ * function-based API expected by the edge functions.  The backend file
+ * has no internal imports so it is importable from Deno.
  */
 
-const REDACTION_PATTERNS = [
-  /\b[13][a-km-zA-HJ-NP-Z1-9]{25,34}\b/g,
-  /\bbc1[a-z0-9]{39,59}\b/g,
-  /\btb1[a-z0-9]{39,59}\b/g,
-  /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g,
-  /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g,
-];
+// Re-export types and utilities from the backend CORE.
+export type { LogContext } from "../../../backend/src/infra/observability/StructuredLogger.ts";
+export { generateRequestId } from "../../../backend/src/infra/observability/StructuredLogger.ts";
 
-function redact(text: string): string {
-  let r = text;
-  for (const p of REDACTION_PATTERNS) r = r.replace(p, "[REDACTED]");
-  return r;
-}
+import {
+  ConsoleStructuredLogger,
+} from "../../../backend/src/infra/observability/StructuredLogger.ts";
+import type { LogContext } from "../../../backend/src/infra/observability/StructuredLogger.ts";
 
-export interface LogContext {
-  requestId: string;
-  endpoint: string;
-  status?: number;
-  latencyMs?: number;
-  rateLimitTriggered?: boolean;
-  [key: string]: unknown;
-}
+const _logger = new ConsoleStructuredLogger();
 
-function formatLog(level: string, message: string, ctx: LogContext): string {
-  const safe: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(ctx)) {
-    safe[k] = typeof v === "string" ? redact(v) : v;
-  }
-  return JSON.stringify({ level, message: redact(message), ...safe, timestamp: new Date().toISOString() });
-}
-
+/** Log at INFO level. */
 export function logInfo(message: string, ctx: LogContext): void {
-  console.log(formatLog("info", message, ctx));
+  _logger.info(message, ctx);
 }
 
+/** Log at WARN level. */
 export function logWarn(message: string, ctx: LogContext): void {
-  console.warn(formatLog("warn", message, ctx));
+  _logger.warn(message, ctx);
 }
 
+/** Log at ERROR level. */
 export function logError(message: string, ctx: LogContext): void {
-  console.error(formatLog("error", message, ctx));
-}
-
-export function generateRequestId(): string {
-  const arr = new Uint8Array(8);
-  crypto.getRandomValues(arr);
-  return Array.from(arr, (b) => b.toString(16).padStart(2, "0")).join("");
+  _logger.error(message, ctx);
 }

@@ -4,14 +4,11 @@ import { rateLimitError, internalError, methodNotAllowed } from "../_shared/erro
 import { checkRateLimit, recordRateLimit, hashString } from "../_shared/rate-limiter.ts";
 import { logInfo, logWarn, logError, generateRequestId } from "../_shared/structured-logger.ts";
 
-const TESTNET_CHARSET = "0123456789abcdefghijklmnopqrstuvwxyz";
-
-function generateMockTestnetAddress(): string {
-  const body = new Uint8Array(38);
-  crypto.getRandomValues(body);
-  const encoded = Array.from(body, (b) => TESTNET_CHARSET[b % TESTNET_CHARSET.length]).join("");
-  return `tb1q${encoded.slice(0, 38)}`;
-}
+// Business logic delegated to the CORE backend module.
+import {
+  generateDepositAddress,
+  getSessionExpiresAt,
+} from "../../../backend/src/modules/mix-session/domain/index.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return corsResponse();
@@ -39,9 +36,10 @@ Deno.serve(async (req) => {
 
     await recordRateLimit(ipHash, "mix-sessions", supabase);
 
+    // Core domain logic: address generation and session TTL come from backend/src
     const now = new Date();
-    const expiresAt = new Date(now.getTime() + 30 * 60 * 1000);
-    const depositAddress = generateMockTestnetAddress();
+    const expiresAt = getSessionExpiresAt(now);
+    const depositAddress = generateDepositAddress("testnet");
 
     const { data, error } = await supabase
       .from("mix_sessions")

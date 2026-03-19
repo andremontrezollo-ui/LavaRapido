@@ -1,32 +1,42 @@
 /**
- * Shared Security Headers for Edge Functions
- * 
- * Centralized headers applied to all responses.
+ * Shared Security Headers for Edge Functions — HTTP entry layer
+ *
+ * Security header constants are sourced from the CORE backend
+ * (backend/src/infra/security/SecurityHeaders.ts) to keep a single
+ * source of truth.  This file only adds the Deno-specific Response
+ * helpers that are not appropriate in the Node.js backend.
  */
 
-export const SECURITY_HEADERS: Record<string, string> = {
-  "X-Content-Type-Options": "nosniff",
-  "X-Frame-Options": "DENY",
-  "Referrer-Policy": "no-referrer",
-  "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
-  "Permissions-Policy": "camera=(), microphone=(), geolocation=(), interest-cohort=()",
-  "Content-Security-Policy":
-    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
-};
+// Re-export canonical constants from the backend CORE.
+// These files have no internal imports so they are importable from Deno.
+export {
+  SECURITY_HEADERS,
+  CORS_HEADERS,
+} from "../../../backend/src/infra/security/SecurityHeaders.ts";
 
-export const CORS_HEADERS: Record<string, string> = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import {
+  SECURITY_HEADERS,
+  CORS_HEADERS,
+} from "../../../backend/src/infra/security/SecurityHeaders.ts";
 
-export function jsonResponse(body: unknown, status: number, extra?: Record<string, string>): Response {
+/** Build a JSON response with all security + CORS headers applied. */
+export function jsonResponse(
+  body: unknown,
+  status: number,
+  extra?: Record<string, string>,
+): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...CORS_HEADERS, ...SECURITY_HEADERS, "Content-Type": "application/json", ...extra },
+    headers: {
+      ...CORS_HEADERS,
+      ...SECURITY_HEADERS,
+      "Content-Type": "application/json",
+      ...extra,
+    },
   });
 }
 
+/** CORS preflight response (OPTIONS). */
 export function corsResponse(): Response {
   return new Response(null, { headers: CORS_HEADERS });
 }
