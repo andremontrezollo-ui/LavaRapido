@@ -65,11 +65,21 @@ npm run lint
 
 ### Environment Variables
 
-This project does not require any environment variables for frontend operation. All configuration is handled through `src/lib/constants.ts`.
+Copy `.env.example` to `.env` and fill in the values before running the app:
 
-For backend functionality (when implemented via Lovable Cloud):
-- API keys and secrets should be stored in Lovable Cloud secrets
-- Never commit secrets to the repository
+```bash
+cp .env.example .env
+# then edit .env with real values
+```
+
+| Variable | Description |
+|---|---|
+| `VITE_SUPABASE_URL` | Your Supabase project URL |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Supabase anonymous (publishable) key |
+| `VITE_SUPABASE_PROJECT_ID` | Supabase project ID |
+
+> ⚠️ **Never commit `.env` to version control.** It is listed in `.gitignore`.
+> If you have accidentally committed secrets, rotate them immediately in the Supabase dashboard.
 
 ## Security Considerations
 
@@ -82,7 +92,7 @@ All user inputs are validated using Zod schemas:
 
 ### Best Practices Implemented
 
-- ✅ No hardcoded secrets in codebase
+- ⚠️ `.env` must NOT be committed — add to `.gitignore` and use `.env.example` as the template
 - ✅ Input sanitization and validation
 - ✅ XSS prevention through React's built-in escaping
 - ✅ Secure random ID generation using `crypto.getRandomValues()`
