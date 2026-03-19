@@ -22,11 +22,12 @@ export class OutboxProcessor {
 
     for (const msg of pending) {
       try {
-        const event = JSON.parse(msg.payload) as SystemEvent;
-        // Restore Date objects
-        if (typeof event.timestamp === 'string') {
-          (event as any).timestamp = new Date(event.timestamp);
+        const raw = JSON.parse(msg.payload) as Record<string, unknown>;
+        // Restore Date objects lost during JSON serialization
+        if (typeof raw['timestamp'] === 'string') {
+          raw['timestamp'] = new Date(raw['timestamp']);
         }
+        const event = raw as unknown as SystemEvent;
         await this.eventBus.publish(event);
         await this.outbox.markPublished(msg.id, new Date());
         published++;

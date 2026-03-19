@@ -10,7 +10,7 @@ import type { InboxStore } from './inbox-message';
 import { createInboxMessage } from './inbox-message';
 
 export class ResilientEventBus implements EventBus {
-  private handlers = new Map<string, Set<EventHandler<any>>>();
+  private handlers = new Map<string, Set<EventHandler<SystemEvent>>>();
   private globalHandlers = new Set<EventHandler<SystemEvent>>();
   private deadLetterQueue: FailedEvent[] = [];
   private readonly maxRetries: number;
