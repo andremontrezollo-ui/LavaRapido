@@ -2,6 +2,19 @@
  * Mix Session Status Lookup
  * POST /functions/v1/mix-session-status
  * Body: { sessionId: "uuid" }
+ *
+ * @deprecated EDGE FUNCTION DEPRECATED — DO NOT ADD NEW LOGIC HERE.
+ *
+ * This function has been superseded by the Express/Node.js backend:
+ *   POST /api/v1/sessions/status
+ *
+ * This file remains only as a temporary fallback during ETAPA 3 of the
+ * architectural migration. It will be removed in ETAPA 6.
+ *
+ * See ARCHITECTURE.md — Section 4: Plano de Migração, ETAPA 6.
+ *
+ * The canonical implementation now lives at:
+ *   backend/src/api/routes/sessions.route.ts
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
