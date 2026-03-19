@@ -9,6 +9,9 @@ import { jsonResponse, corsResponse } from "../_shared/security-headers.ts";
 import { validationError, notFoundError, internalError, methodNotAllowed } from "../_shared/error-response.ts";
 import { logInfo, logError, generateRequestId } from "../_shared/structured-logger.ts";
 
+// Session expiry logic delegated to the CORE backend module.
+import { isSessionExpired } from "../../../backend/src/modules/mix-session/domain/index.ts";
+
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 Deno.serve(async (req) => {
@@ -49,12 +52,12 @@ Deno.serve(async (req) => {
       return notFoundError("Session not found");
     }
 
-    // Check if expired
-    const isExpired = new Date(data.expires_at) < new Date();
-    const status = isExpired ? "expired" : data.status;
+    // Core domain logic: expiry check delegated to backend/src
+    const expired = isSessionExpired(data.expires_at);
+    const status = expired ? "expired" : data.status;
 
-    // Update status in DB if expired
-    if (isExpired && data.status !== "expired") {
+    // Persist updated status if it just expired
+    if (expired && data.status !== "expired") {
       await supabase
         .from("mix_sessions")
         .update({ status: "expired" })
