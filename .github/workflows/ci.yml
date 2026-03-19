@@ -6,10 +6,16 @@ on:
   pull_request:
     branches: [main, master]
 
+# Default to read-only permissions for the GITHUB_TOKEN.
+permissions:
+  contents: read
+
 jobs:
   frontend:
-    name: Frontend — lint, typecheck, test
+    name: Frontend — lint, typecheck, test, build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - uses: actions/checkout@v4
@@ -25,7 +31,7 @@ jobs:
         run: bun run lint
 
       - name: Type check
-        run: bun run tsc --noEmit
+        run: bunx tsc --noEmit
 
       - name: Test
         run: bun run test
@@ -36,6 +42,8 @@ jobs:
   check-env-not-committed:
     name: Security — verify .env is not committed
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - uses: actions/checkout@v4
