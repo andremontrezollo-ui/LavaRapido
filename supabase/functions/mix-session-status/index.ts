@@ -6,8 +6,9 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { jsonResponse, corsResponse } from "../_shared/security-headers.ts";
-import { validationError, notFoundError, internalError, methodNotAllowed } from "../_shared/error-response.ts";
-import { logInfo, logError, generateRequestId } from "../_shared/structured-logger.ts";
+import { validationError, notFoundError, internalError, methodNotAllowed, rateLimitError } from "../_shared/error-response.ts";
+import { checkRateLimit, recordRateLimit, hashString } from "../_shared/rate-limiter.ts";
+import { logInfo, logWarn, logError, generateRequestId } from "../_shared/structured-logger.ts";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -19,6 +20,24 @@ Deno.serve(async (req) => {
   const startTime = Date.now();
 
   try {
+    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const ipHash = await hashString(clientIp);
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    // Rate limit: max 30 status lookups per 10 minutes per IP
+    const rl = await checkRateLimit(ipHash, { endpoint: "mix-session-status", maxRequests: 30, windowSeconds: 600 }, supabase);
+
+    if (!rl.allowed) {
+      logWarn("Rate limit triggered", { requestId, endpoint: "mix-session-status", rateLimitTriggered: true, status: 429 });
+      return rateLimitError(rl.retryAfterSeconds);
+    }
+
+    await recordRateLimit(ipHash, "mix-session-status", supabase);
+
     let body: unknown;
     try {
       body = await req.json();
@@ -32,11 +51,6 @@ Deno.serve(async (req) => {
     if (typeof sessionId !== "string" || !UUID_RE.test(sessionId)) {
       return validationError("Invalid session ID format. Must be a valid UUID.");
     }
-
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
 
     const { data, error } = await supabase
       .from("mix_sessions")

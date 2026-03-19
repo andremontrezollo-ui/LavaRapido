@@ -2,16 +2,17 @@
  * Security utilities for API layer.
  */
 
-export function hashIp(ip: string): string {
-  // Simple hash for privacy; production would use HMAC with secret
-  let hash = 0;
-  const str = ip + ':salt:shadowmix';
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash |= 0;
-  }
-  return Math.abs(hash).toString(16).padStart(8, '0');
+/**
+ * Hashes an IP address using SHA-256 for privacy-preserving logging.
+ * Returns a hex string.
+ */
+export async function hashIp(ip: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(ip);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
 }
 
 export const SECURITY_HEADERS: Record<string, string> = {
