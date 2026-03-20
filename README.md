@@ -63,13 +63,31 @@ npm run typecheck
 npm run lint
 ```
 
-### Environment Variables
+## Environment Setup
 
-This project does not require any environment variables for frontend operation. All configuration is handled through `src/lib/constants.ts`.
+This project requires the following environment variables to connect to Supabase.
 
-For backend functionality (when implemented via Lovable Cloud):
-- API keys and secrets should be stored in Lovable Cloud secrets
-- Never commit secrets to the repository
+### Setup steps
+
+1. Copy the example file:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Open `.env` and fill in your values:
+   ```env
+   VITE_SUPABASE_URL=https://<your-project-ref>.supabase.co
+   VITE_SUPABASE_ANON_KEY=<your-anon-public-key>
+   ```
+   Both values can be found in your **Supabase Dashboard → Settings → API**.
+
+3. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+> ⚠️ **Never commit `.env` to version control.** It is already listed in `.gitignore`.
+> Use `.env.example` (no real values) when sharing configuration requirements.
 
 ## Security Considerations
 
