@@ -3,8 +3,10 @@
  * Standardized /api/v1 pattern via Edge Functions
  */
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+import { env } from "@/lib/env";
+
+const SUPABASE_URL = env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 export interface ApiErrorDetail {
   code: string;
