@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,85 +13,62 @@ import {
   CheckCircle2, 
   Key,
   AlertCircle,
-  Loader2
+  Loader2,
+  X
 } from "lucide-react";
 import { contactFormSchema, type ContactFormData } from "@/lib/validation";
 import { VALIDATION_LIMITS } from "@/lib/constants";
 import { createContactTicket } from "@/lib/api";
 
-interface FormErrors {
-  subject?: string;
-  message?: string;
-  replyContact?: string;
-}
-
 export default function Contact() {
   const [submitted, setSubmitted] = useState(false);
   const [ticketId, setTicketId] = useState("");
-  const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
-  const [formData, setFormData] = useState<ContactFormData>({
-    subject: "",
-    message: "",
-    replyContact: "",
+
+  const form = useForm<ContactFormData>({
+    resolver: zodResolver(contactFormSchema),
+    defaultValues: {
+      subject: "",
+      message: "",
+      replyContact: "",
+    },
   });
 
-  const handleChange = (field: keyof ContactFormData, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: undefined }));
-    }
-    if (apiError) setApiError(null);
-  };
+  const messageValue = form.watch("message");
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const result = contactFormSchema.safeParse(formData);
-    
-    if (!result.success) {
-      const fieldErrors: FormErrors = {};
-      result.error.errors.forEach((err) => {
-        const field = err.path[0] as keyof FormErrors;
-        fieldErrors[field] = err.message;
-      });
-      setErrors(fieldErrors);
-      return;
-    }
-
+  const onSubmit = form.handleSubmit(async (data) => {
     setLoading(true);
     setApiError(null);
 
-    const apiResult = await createContactTicket({
-      subject: formData.subject,
-      message: formData.message,
-      replyContact: formData.replyContact || undefined,
+    const result = await createContactTicket({
+      subject: data.subject,
+      message: data.message,
+      replyContact: data.replyContact || undefined,
     });
 
     setLoading(false);
 
-    if (apiResult.error) {
+    if (result.error) {
       setApiError(
-        apiResult.status === 429
+        result.status === 429
           ? "Too many requests. Please wait a few minutes before trying again."
-          : apiResult.error.message
+          : result.error.message
       );
       return;
     }
 
-    if (apiResult.data) {
-      setTicketId(apiResult.data.ticketId);
+    if (result.data) {
+      setTicketId(result.data.ticketId);
       setSubmitted(true);
-      setErrors({});
+      form.reset();
     }
-  };
+  });
 
   const handleNewMessage = () => {
     setSubmitted(false);
     setTicketId("");
-    setFormData({ subject: "", message: "", replyContact: "" });
-    setErrors({});
+    form.reset();
     setApiError(null);
   };
 
@@ -126,13 +105,24 @@ export default function Contact() {
                     </h2>
 
                     {apiError && (
-                      <div className="mb-6 p-3 rounded-lg bg-destructive/10 border border-destructive/20 flex items-center gap-2">
+                      <div
+                        role="alert"
+                        className="mb-6 p-3 rounded-lg bg-destructive/10 border border-destructive/20 flex items-center gap-2"
+                      >
                         <AlertCircle className="h-4 w-4 text-destructive shrink-0" />
-                        <span className="text-sm text-destructive">{apiError}</span>
+                        <span className="text-sm text-destructive flex-1">{apiError}</span>
+                        <button
+                          type="button"
+                          aria-label="Dismiss error"
+                          onClick={() => setApiError(null)}
+                          className="text-destructive hover:text-destructive/80"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
                       </div>
                     )}
 
-                    <form onSubmit={handleSubmit} className="space-y-6" noValidate>
+                    <form onSubmit={onSubmit} className="space-y-6" noValidate>
                       <div>
                         <Label htmlFor="subject" className="text-muted-foreground">
                           Subject
@@ -140,15 +130,18 @@ export default function Contact() {
                         <Input
                           id="subject"
                           placeholder="Briefly describe your question"
-                          className={`mt-2 ${errors.subject ? "border-destructive" : ""}`}
-                          value={formData.subject}
-                          onChange={(e) => handleChange("subject", e.target.value)}
+                          className={`mt-2 ${form.formState.errors.subject ? "border-destructive" : ""}`}
+                          {...form.register("subject")}
                           maxLength={VALIDATION_LIMITS.subject.maxLength}
                           autoComplete="off"
                           disabled={loading}
+                          aria-invalid={!!form.formState.errors.subject}
+                          aria-describedby={form.formState.errors.subject ? "subject-error" : undefined}
                         />
-                        {errors.subject && (
-                          <p className="text-xs text-destructive mt-1">{errors.subject}</p>
+                        {form.formState.errors.subject && (
+                          <p id="subject-error" role="alert" className="text-xs text-destructive mt-1">
+                            {form.formState.errors.subject.message}
+                          </p>
                         )}
                       </div>
 
@@ -159,20 +152,23 @@ export default function Contact() {
                         <Textarea
                           id="message"
                           placeholder="Detail your question or issue"
-                          className={`mt-2 min-h-[150px] ${errors.message ? "border-destructive" : ""}`}
-                          value={formData.message}
-                          onChange={(e) => handleChange("message", e.target.value)}
+                          className={`mt-2 min-h-[150px] ${form.formState.errors.message ? "border-destructive" : ""}`}
+                          {...form.register("message")}
                           maxLength={VALIDATION_LIMITS.message.maxLength}
                           disabled={loading}
+                          aria-invalid={!!form.formState.errors.message}
+                          aria-describedby={form.formState.errors.message ? "message-error" : "message-count"}
                         />
                         <div className="flex justify-between mt-1">
-                          {errors.message ? (
-                            <p className="text-xs text-destructive">{errors.message}</p>
+                          {form.formState.errors.message ? (
+                            <p id="message-error" role="alert" className="text-xs text-destructive">
+                              {form.formState.errors.message.message}
+                            </p>
                           ) : (
                             <span />
                           )}
-                          <span className="text-xs text-muted-foreground">
-                            {formData.message.length}/{VALIDATION_LIMITS.message.maxLength}
+                          <span id="message-count" className="text-xs text-muted-foreground">
+                            {messageValue.length}/{VALIDATION_LIMITS.message.maxLength}
                           </span>
                         </div>
                       </div>
@@ -184,17 +180,20 @@ export default function Contact() {
                         <Input
                           id="reply"
                           placeholder="Email, PGP key, Session ID, etc."
-                          className={`mt-2 ${errors.replyContact ? "border-destructive" : ""}`}
-                          value={formData.replyContact}
-                          onChange={(e) => handleChange("replyContact", e.target.value)}
+                          className={`mt-2 ${form.formState.errors.replyContact ? "border-destructive" : ""}`}
+                          {...form.register("replyContact")}
                           maxLength={VALIDATION_LIMITS.replyContact.maxLength}
                           autoComplete="off"
                           disabled={loading}
+                          aria-invalid={!!form.formState.errors.replyContact}
+                          aria-describedby={form.formState.errors.replyContact ? "reply-error" : "reply-hint"}
                         />
-                        {errors.replyContact ? (
-                          <p className="text-xs text-destructive mt-1">{errors.replyContact}</p>
+                        {form.formState.errors.replyContact ? (
+                          <p id="reply-error" role="alert" className="text-xs text-destructive mt-1">
+                            {form.formState.errors.replyContact.message}
+                          </p>
                         ) : (
-                          <p className="text-xs text-muted-foreground mt-2">
+                          <p id="reply-hint" className="text-xs text-muted-foreground mt-2">
                             You can leave blank and use the ticket ID to check replies
                           </p>
                         )}
