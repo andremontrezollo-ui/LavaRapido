@@ -14,6 +14,9 @@ interface EnvSchema {
 
 const SCHEMA: EnvSchema[] = [
   { key: 'APP_ENV', required: false, type: 'string', configKey: 'env' },
+  { key: 'APP_VERSION', required: false, type: 'string', configKey: 'version' },
+  { key: 'HOST', required: false, type: 'string', configKey: 'host' },
+  { key: 'PORT', required: false, type: 'number', configKey: 'port' },
   { key: 'SUPABASE_URL', required: true, type: 'string', configKey: 'supabaseUrl' },
   { key: 'SUPABASE_ANON_KEY', required: true, type: 'string', configKey: 'supabaseAnonKey' },
   { key: 'SUPABASE_SERVICE_ROLE_KEY', required: true, type: 'string', configKey: 'supabaseServiceRoleKey' },
@@ -65,5 +68,5 @@ export function validateEnvSchema(env: Record<string, string | undefined>): {
     errors.push(`LOG_LEVEL must be one of: ${VALID_LOG_LEVELS.join(', ')}`);
   }
 
-  return { valid: errors.length === 0, errors, config: config as AppConfig };
+  return { valid: errors.length === 0, errors, config: config as unknown as AppConfig };
 }

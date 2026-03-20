@@ -24,5 +24,6 @@ export { InMemoryJobStore } from './scheduler/job.store';
 export type { ScheduledJob, JobStore, JobStatus } from './scheduler/job-scheduler';
 
 // Observability
-export { StructuredLogger } from './observability/StructuredLogger';
-export { SecurityHeaders } from './security/SecurityHeaders';
+export { ConsoleStructuredLogger, generateRequestId } from './observability/StructuredLogger';
+export type { StructuredLogger, LogContext } from './observability/StructuredLogger';
+export { SECURITY_HEADERS } from './security/SecurityHeaders';

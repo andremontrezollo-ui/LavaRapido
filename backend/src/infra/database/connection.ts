@@ -1,15 +1,17 @@
-import { createConnection } from 'typeorm';
-import { User } from '../entities/User';
+/**
+ * Database Connection — placeholder for future Postgres/Supabase integration.
+ * Currently the backend uses in-memory stores for all persistence.
+ */
 
-const connection = createConnection({
-    type: 'mysql', // Set the database type
-    host: 'localhost', // Database host
-    port: 3306, // Database port
-    username: 'your_username', // Database username
-    password: 'your_password', // Database password
-    database: 'your_database_name', // Database name
-    entities: [User],
-    synchronize: true,
-});
+export interface DatabaseConnection {
+  isConnected(): boolean;
+  disconnect(): Promise<void>;
+}
 
-export default connection;
+export class NoopDatabaseConnection implements DatabaseConnection {
+  /** Always returns false — this is a placeholder until Supabase/Postgres integration is implemented. */
+  isConnected(): boolean { return false; }
+  async disconnect(): Promise<void> { /* no-op */ }
+}
+
+export const databaseConnection: DatabaseConnection = new NoopDatabaseConnection();

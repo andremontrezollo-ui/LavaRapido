@@ -11,7 +11,8 @@ let cachedConfig: AppConfig | null = null;
 export function loadConfig(env?: Record<string, string | undefined>): AppConfig {
   if (cachedConfig) return cachedConfig;
 
-  const source = env ?? (typeof Deno !== 'undefined' ? Deno.env.toObject() : process.env) as Record<string, string | undefined>;
+  const denoEnv = (globalThis as any).Deno;
+  const source = env ?? (denoEnv !== undefined ? denoEnv.env.toObject() : process.env) as Record<string, string | undefined>;
   const result = validateEnvSchema(source);
 
   if (!result.valid) {
