@@ -1,7 +1,8 @@
 import { Wallet, CheckCircle2, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { MixingStep } from "@/features/mixing/types/mixing.types";
 
-export type MixingStep = "configure" | "confirm" | "deposit";
+export type { MixingStep };
 
 interface ProgressStepsProps {
   currentStep: MixingStep;

@@ -5,12 +5,10 @@ import { Slider } from "@/components/ui/slider";
 import { Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isValidBitcoinAddress } from "@/lib/validation";
+import type { Destination } from "@/features/mixing/types/mixing.types";
 
-export interface DestinationAddress {
-  id: string;
-  address: string;
-  percentage: number;
-}
+/** @deprecated Use Destination from @/features/mixing/types/mixing.types */
+export type DestinationAddress = Destination;
 
 interface DestinationListProps {
   destinations: DestinationAddress[];
