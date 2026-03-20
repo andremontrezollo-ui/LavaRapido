@@ -65,11 +65,21 @@ npm run lint
 
 ### Environment Variables
 
-This project does not require any environment variables for frontend operation. All configuration is handled through `src/lib/constants.ts`.
+This project requires the following environment variables to run:
 
-For backend functionality (when implemented via Lovable Cloud):
-- API keys and secrets should be stored in Lovable Cloud secrets
-- Never commit secrets to the repository
+#### 🔧 Environment Setup
+
+```bash
+cp .env.example .env
+```
+
+Then fill in your values in `.env`:
+
+- `VITE_SUPABASE_URL`: URL do projeto Supabase (e.g. `https://your-project.supabase.co`)
+- `VITE_SUPABASE_PUBLISHABLE_KEY`: chave pública do Supabase (NÃO secreta — safe to use in the browser)
+
+> ⚠️ **These variables are required.** The app will throw an error on startup if they are missing or invalid.
+> Never commit your `.env` file to the repository.
 
 ## Security Considerations
 
