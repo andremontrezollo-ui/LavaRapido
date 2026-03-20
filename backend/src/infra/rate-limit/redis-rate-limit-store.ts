@@ -1,44 +1,25 @@
-import { RedisClient } from 'redis';
+/**
+ * Redis Rate Limit Store — ioredis-backed implementation.
+ * Implements the RateLimitStore interface from the API middleware layer.
+ */
 
-class RedisRateLimitStore {
-    private client: RedisClient;
+import type { RateLimitStore } from '../../api/middlewares/rate-limit.middleware';
 
-    constructor(redisClient: RedisClient) {
-        this.client = redisClient;
-    }
-
-    // Increment the rate limit for a specific key
-    async increment(key: string, limit: number, period: number): Promise<number> {
-        const currentCount = await new Promise<number>((resolve, reject) => {
-            this.client.incr(key, (err, reply) => {
-                if (err) reject(err);
-                else resolve(reply);
-            });
-        });
-
-        // Set expiration time if it's the first request
-        if (currentCount === 1) {
-            await new Promise<void>((resolve, reject) => {
-                this.client.expire(key, period, (err) => {
-                    if (err) reject(err);
-                    else resolve();
-                });
-            });
-        }
-
-        return currentCount;
-    }
-
-    // Check if the limit has been exceeded
-    async isLimitExceeded(key: string, limit: number): Promise<boolean> {
-        const currentCount = await new Promise<number>((resolve, reject) => {
-            this.client.get(key, (err, reply) => {
-                if (err) reject(err);
-                else resolve(reply ? parseInt(reply) : 0);
-            });
-        });
-        return currentCount >= limit;
-    }
+interface RedisLikeClient {
+  incr(key: string): Promise<number>;
+  expire(key: string, seconds: number): Promise<number>;
+  ttl(key: string): Promise<number>;
 }
 
-export default RedisRateLimitStore;
+export class RedisRateLimitStore implements RateLimitStore {
+  constructor(private readonly client: RedisLikeClient) {}
+
+  async increment(key: string, windowSeconds: number): Promise<{ count: number; ttl: number }> {
+    const count = await this.client.incr(key);
+    if (count === 1) {
+      await this.client.expire(key, windowSeconds);
+    }
+    const ttl = await this.client.ttl(key);
+    return { count, ttl: ttl > 0 ? ttl : windowSeconds };
+  }
+}

@@ -4,6 +4,9 @@
 
 export interface AppConfig {
   readonly env: 'development' | 'test' | 'production';
+  readonly version: string;
+  readonly host: string;
+  readonly port: number;
   readonly supabaseUrl: string;
   readonly supabaseAnonKey: string;
   readonly supabaseServiceRoleKey: string;
@@ -19,6 +22,9 @@ export interface AppConfig {
 
 export const DEFAULT_CONFIG: Partial<AppConfig> = {
   env: 'development',
+  version: '1.0.0',
+  host: '0.0.0.0',
+  port: 3000,
   logLevel: 'info',
   rateLimitMaxRequests: 10,
   rateLimitWindowMinutes: 10,
