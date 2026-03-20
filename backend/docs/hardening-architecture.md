@@ -1,8 +1,17 @@
-# Hardened Backend Architecture
+# Domain Library — Hardening Architecture Reference
+
+> ⚠️ **This document describes the domain-library architecture of `backend/src/`.**
+>
+> `backend/src/` is **NOT the production runtime**. It is an architectural reference and shared-domain foundation.
+>
+> **Production HTTP runtime = `supabase/functions/` (Deno Edge Functions).**
+> See [`docs/adr/0001-backend-runtime-source-of-truth.md`](../../docs/adr/0001-backend-runtime-source-of-truth.md).
+
+---
 
 ## Overview
 
-The ShadowMix backend follows **Clean Architecture** with **DDD** per module, enforcing strict layer boundaries: `domain → application → infrastructure → interfaces`.
+The ShadowMix domain library follows **Clean Architecture** with **DDD** per module, enforcing strict layer boundaries: `domain → application → infrastructure → interfaces`.
 
 ## Architecture Layers
 
