@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { generateMockTestnetAddress, generateSessionId, createMockSession } from "@/lib/mock-session";
+import { generateMockTestnetAddress, generateSessionId, createMockSession } from "@/test/mock-session";
 
 describe("generateMockTestnetAddress", () => {
   it("starts with tb1q", () => {

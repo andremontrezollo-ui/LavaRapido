@@ -2,13 +2,23 @@
 
 ## Overview
 
-The ShadowMix backend follows **Clean Architecture** with **DDD** per module, enforcing strict layer boundaries: `domain → application → infrastructure → interfaces`.
+The ShadowMix backend follows **Clean Architecture** with **DDD** per module, enforcing strict layer boundaries: `domain → application → infrastructure → interface`.
+
+The **interface/HTTP layer** is implemented exclusively in **Supabase Edge Functions** (`supabase/functions/`).  
+`backend/src/` contains only the domain library (shared kernel + modules + infrastructure adapters).
 
 ## Architecture Layers
 
 ```
-backend/src/
-├── api/              # Interface layer: controllers, middlewares, schemas, security
+supabase/functions/           # Interface layer (Deno Edge Functions — HTTP runtime)
+├── mix-sessions/index.ts     # POST /mix-sessions
+├── mix-session-status/index.ts
+├── contact/index.ts
+├── health/index.ts
+├── cleanup/index.ts
+└── _shared/                  # Shared HTTP utilities (security headers, rate limiter, logger)
+
+backend/src/                  # Domain library (imported by Edge Functions)
 ├── infra/            # Infrastructure: persistence, messaging, locks, saga, scheduler
 ├── shared/           # Shared kernel: events, http, ports, policies, config, logging
 └── modules/          # Domain modules (bounded contexts)
@@ -128,16 +138,17 @@ States: `started → step_completed → completed | compensating → compensated
 
 ## API Security
 
+Security concerns are handled at the Edge Function layer (`supabase/functions/_shared/`):
+
 | Layer | Implementation |
 |-------|---------------|
-| Authentication | `AuthMiddleware` — service-role/anon key validation with constant-time comparison |
-| Authorization | `AuthorizationMiddleware` — scope-based access per endpoint |
-| Rate Limiting | `RateLimitMiddleware` — per IP+endpoint with configurable window |
-| Correlation | `CorrelationIdMiddleware` — propagates or generates correlation IDs |
-| Logging | `RequestLoggingMiddleware` — structured, redacted request/response logs |
-| Errors | `ErrorHandler` — maps domain errors to safe HTTP responses |
-| Validation | Schema-based DTO validation with sanitization |
-| Headers | Security headers: CSP, HSTS, X-Frame-Options, etc. |
+| Authentication | Supabase `apikey` header + service role key via `SUPABASE_SERVICE_ROLE_KEY` |
+| Rate Limiting | SHA-256 hashed IP per endpoint with configurable window (`rate-limiter.ts`) |
+| Correlation | Request IDs generated per request (`structured-logger.ts`) |
+| Logging | Structured, privacy-preserving JSON logs with redaction (`structured-logger.ts`) |
+| Errors | Standardized error format — no stack traces exposed (`error-response.ts`) |
+| Validation | Zod schemas per endpoint |
+| Headers | Security headers: CSP, HSTS, X-Frame-Options, etc. (`security-headers.ts`) |
 
 ## Guarantees
 

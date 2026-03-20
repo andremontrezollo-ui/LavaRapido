@@ -10,7 +10,7 @@ import { DepositInfo } from "@/components/mixing/DepositInfo";
 import { SERVICE_CONFIG } from "@/lib/constants";
 import { isValidBitcoinAddress } from "@/lib/validation";
 import { createMixSession, type MixSessionResponse } from "@/lib/api";
-import type { MixSession } from "@/lib/mock-session";
+import type { MixSession } from "@/lib/session.types";
 
 export default function MixingPage() {
   const [step, setStep] = useState<MixingStep>("configure");
