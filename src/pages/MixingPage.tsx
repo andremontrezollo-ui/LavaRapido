@@ -1,115 +1,34 @@
-import { useState, useCallback, useMemo } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, Plus, Loader2 } from "lucide-react";
-import { ProgressSteps, type MixingStep } from "@/components/mixing/ProgressSteps";
-import { DestinationList, type DestinationAddress } from "@/components/mixing/DestinationList";
+import { AlertTriangle, Plus } from "lucide-react";
+import { ProgressSteps } from "@/components/mixing/ProgressSteps";
+import { DestinationList } from "@/components/mixing/DestinationList";
 import { DelayConfiguration } from "@/components/mixing/DelayConfiguration";
 import { ConfirmationSummary } from "@/components/mixing/ConfirmationSummary";
 import { DepositInfo } from "@/components/mixing/DepositInfo";
 import { SERVICE_CONFIG } from "@/lib/constants";
-import { isValidBitcoinAddress } from "@/lib/validation";
-import { createMixSession, type MixSessionResponse } from "@/lib/api";
-import type { MixSession } from "@/lib/mock-session";
+import { useMixingFlow } from "@/hooks/useMixingFlow";
 
 export default function MixingPage() {
-  const [step, setStep] = useState<MixingStep>("configure");
-  const [destinations, setDestinations] = useState<DestinationAddress[]>([
-    { id: "1", address: "", percentage: 100 },
-  ]);
-  const [delay, setDelay] = useState<number[]>([SERVICE_CONFIG.defaultDelay]);
-  const [session, setSession] = useState<MixSession | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const addDestination = useCallback(() => {
-    if (destinations.length >= SERVICE_CONFIG.maxDestinations) return;
-    
-    const newPercentage = Math.floor(100 / (destinations.length + 1));
-    const updatedDestinations = destinations.map((d) => ({
-      ...d,
-      percentage: newPercentage,
-    }));
-    updatedDestinations.push({
-      id: Date.now().toString(),
-      address: "",
-      percentage: 100 - newPercentage * destinations.length,
-    });
-    setDestinations(updatedDestinations);
-  }, [destinations]);
-
-  const removeDestination = useCallback((id: string) => {
-    if (destinations.length <= 1) return;
-    
-    const filtered = destinations.filter((d) => d.id !== id);
-    const perAddress = Math.floor(100 / filtered.length);
-    const remainder = 100 - perAddress * (filtered.length - 1);
-    setDestinations(
-      filtered.map((d, i) => ({
-        ...d,
-        percentage: i === filtered.length - 1 ? remainder : perAddress,
-      }))
-    );
-  }, [destinations]);
-
-  const updateAddress = useCallback((id: string, address: string) => {
-    setDestinations((prev) =>
-      prev.map((d) => (d.id === id ? { ...d, address: address.trim() } : d))
-    );
-  }, []);
-
-  const updatePercentage = useCallback((id: string, percentage: number) => {
-    setDestinations((prev) =>
-      prev.map((d) => (d.id === id ? { ...d, percentage } : d))
-    );
-  }, []);
-
-  const allAddressesValid = useMemo(() => 
-    destinations.every((d) => d.address && isValidBitcoinAddress(d.address)),
-    [destinations]
-  );
-
-  const totalPercentage = useMemo(() => 
-    destinations.reduce((sum, d) => sum + d.percentage, 0),
-    [destinations]
-  );
-
-  const canProceed = allAddressesValid && totalPercentage === 100;
-
-  const handleConfirm = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
-    const result = await createMixSession();
-
-    if (result.error) {
-      setError(result.status === 429 
-        ? "Too many requests. Please wait a few minutes." 
-        : result.error.message);
-      setLoading(false);
-      return;
-    }
-
-    if (result.data) {
-      setSession({
-        sessionId: result.data.sessionId,
-        depositAddress: result.data.depositAddress,
-        createdAt: new Date(result.data.createdAt),
-        expiresAt: new Date(result.data.expiresAt),
-        status: "pending_deposit",
-      });
-      setStep("deposit");
-    }
-    setLoading(false);
-  }, []);
-
-  const handleNewOperation = useCallback(() => {
-    setStep("configure");
-    setDestinations([{ id: "1", address: "", percentage: 100 }]);
-    setDelay([SERVICE_CONFIG.defaultDelay]);
-    setSession(null);
-    setError(null);
-  }, []);
+  const {
+    step,
+    setStep,
+    destinations,
+    delay,
+    setDelay,
+    session,
+    loading,
+    error,
+    setError,
+    addDestination,
+    removeDestination,
+    updateAddress,
+    updatePercentage,
+    totalPercentage,
+    canProceed,
+    handleConfirm,
+    handleNewOperation,
+  } = useMixingFlow();
 
   return (
     <Layout>
