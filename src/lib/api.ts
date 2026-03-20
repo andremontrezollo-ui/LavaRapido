@@ -18,8 +18,12 @@ interface ApiResponse<T> {
   status: number;
 }
 
+const REQUEST_TIMEOUT_MS = 15_000;
+
 async function callFunction<T>(functionName: string, body?: unknown, method: "POST" | "GET" = "POST"): Promise<ApiResponse<T>> {
   const url = `${SUPABASE_URL}/functions/v1/${functionName}`;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
   try {
     const res = await fetch(url, {
@@ -29,7 +33,9 @@ async function callFunction<T>(functionName: string, body?: unknown, method: "PO
         apikey: SUPABASE_ANON_KEY,
       },
       body: body ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
 
     const json = await res.json();
 
@@ -42,9 +48,16 @@ async function callFunction<T>(functionName: string, body?: unknown, method: "PO
     }
 
     return { data: json as T, status: res.status };
-  } catch {
+  } catch (err) {
+    clearTimeout(timeoutId);
+    const isTimeout = err instanceof DOMException && err.name === "AbortError";
     return {
-      error: { code: "NETWORK_ERROR", message: "Network error. Please check your connection." },
+      error: {
+        code: "NETWORK_ERROR",
+        message: isTimeout
+          ? "Request timed out. Please check your connection and try again."
+          : "Network error. Please check your connection.",
+      },
       status: 0,
     };
   }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,6 @@ import {
   Mail, 
   Shield, 
   Clock, 
-  CheckCircle2, 
   Key,
   AlertCircle,
   Loader2
@@ -16,6 +15,8 @@ import {
 import { contactFormSchema, type ContactFormData } from "@/lib/validation";
 import { VALIDATION_LIMITS } from "@/lib/constants";
 import { createContactTicket } from "@/lib/api";
+import { InlineError } from "@/components/system/feedback/InlineError";
+import { SuccessMessage } from "@/components/system/feedback/SuccessMessage";
 
 interface FormErrors {
   subject?: string;
@@ -35,6 +36,11 @@ export default function Contact() {
     replyContact: "",
   });
 
+  // Refs for focus management
+  const subjectRef = useRef<HTMLInputElement>(null);
+  const messageRef = useRef<HTMLTextAreaElement>(null);
+  const successRef = useRef<HTMLDivElement>(null);
+
   const handleChange = (field: keyof ContactFormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
@@ -43,7 +49,7 @@ export default function Contact() {
     if (apiError) setApiError(null);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     
     const result = contactFormSchema.safeParse(formData);
@@ -55,6 +61,12 @@ export default function Contact() {
         fieldErrors[field] = err.message;
       });
       setErrors(fieldErrors);
+      // Focus first invalid field for accessibility
+      if (fieldErrors.subject) {
+        subjectRef.current?.focus();
+      } else if (fieldErrors.message) {
+        messageRef.current?.focus();
+      }
       return;
     }
 
@@ -82,8 +94,10 @@ export default function Contact() {
       setTicketId(apiResult.data.ticketId);
       setSubmitted(true);
       setErrors({});
+      // Focus success message on next frame
+      requestAnimationFrame(() => successRef.current?.focus());
     }
-  };
+  }, [formData]);
 
   const handleNewMessage = () => {
     setSubmitted(false);
@@ -126,19 +140,26 @@ export default function Contact() {
                     </h2>
 
                     {apiError && (
-                      <div className="mb-6 p-3 rounded-lg bg-destructive/10 border border-destructive/20 flex items-center gap-2">
-                        <AlertCircle className="h-4 w-4 text-destructive shrink-0" />
-                        <span className="text-sm text-destructive">{apiError}</span>
-                      </div>
+                      <InlineError
+                        message={apiError}
+                        onRetry={() => setApiError(null)}
+                        className="mb-6"
+                      />
                     )}
 
-                    <form onSubmit={handleSubmit} className="space-y-6" noValidate>
+                    <form
+                      onSubmit={handleSubmit}
+                      className="space-y-6"
+                      noValidate
+                      aria-label="Contact form"
+                    >
                       <div>
-                        <Label htmlFor="subject" className="text-muted-foreground">
+                        <Label htmlFor="contact-subject" className="text-muted-foreground">
                           Subject
                         </Label>
                         <Input
-                          id="subject"
+                          ref={subjectRef}
+                          id="contact-subject"
                           placeholder="Briefly describe your question"
                           className={`mt-2 ${errors.subject ? "border-destructive" : ""}`}
                           value={formData.subject}
@@ -146,43 +167,56 @@ export default function Contact() {
                           maxLength={VALIDATION_LIMITS.subject.maxLength}
                           autoComplete="off"
                           disabled={loading}
+                          aria-invalid={!!errors.subject}
+                          aria-describedby={errors.subject ? "subject-error" : undefined}
                         />
                         {errors.subject && (
-                          <p className="text-xs text-destructive mt-1">{errors.subject}</p>
+                          <p id="subject-error" role="alert" className="text-xs text-destructive mt-1">
+                            {errors.subject}
+                          </p>
                         )}
                       </div>
 
                       <div>
-                        <Label htmlFor="message" className="text-muted-foreground">
+                        <Label htmlFor="contact-message" className="text-muted-foreground">
                           Message
                         </Label>
                         <Textarea
-                          id="message"
+                          ref={messageRef}
+                          id="contact-message"
                           placeholder="Detail your question or issue"
                           className={`mt-2 min-h-[150px] ${errors.message ? "border-destructive" : ""}`}
                           value={formData.message}
                           onChange={(e) => handleChange("message", e.target.value)}
                           maxLength={VALIDATION_LIMITS.message.maxLength}
                           disabled={loading}
+                          aria-invalid={!!errors.message}
+                          aria-describedby={
+                            errors.message
+                              ? "message-error message-count"
+                              : "message-count"
+                          }
                         />
                         <div className="flex justify-between mt-1">
                           {errors.message ? (
-                            <p className="text-xs text-destructive">{errors.message}</p>
+                            <p id="message-error" role="alert" className="text-xs text-destructive">
+                              {errors.message}
+                            </p>
                           ) : (
                             <span />
                           )}
-                          <span className="text-xs text-muted-foreground">
+                          <span id="message-count" className="text-xs text-muted-foreground">
                             {formData.message.length}/{VALIDATION_LIMITS.message.maxLength}
                           </span>
                         </div>
                       </div>
 
                       <div>
-                        <Label htmlFor="reply" className="text-muted-foreground">
+                        <Label htmlFor="contact-reply" className="text-muted-foreground">
                           Reply contact (optional)
                         </Label>
                         <Input
-                          id="reply"
+                          id="contact-reply"
                           placeholder="Email, PGP key, Session ID, etc."
                           className={`mt-2 ${errors.replyContact ? "border-destructive" : ""}`}
                           value={formData.replyContact}
@@ -190,25 +224,35 @@ export default function Contact() {
                           maxLength={VALIDATION_LIMITS.replyContact.maxLength}
                           autoComplete="off"
                           disabled={loading}
+                          aria-invalid={!!errors.replyContact}
+                          aria-describedby={errors.replyContact ? "reply-error" : "reply-hint"}
                         />
                         {errors.replyContact ? (
-                          <p className="text-xs text-destructive mt-1">{errors.replyContact}</p>
+                          <p id="reply-error" role="alert" className="text-xs text-destructive mt-1">
+                            {errors.replyContact}
+                          </p>
                         ) : (
-                          <p className="text-xs text-muted-foreground mt-2">
+                          <p id="reply-hint" className="text-xs text-muted-foreground mt-2">
                             You can leave blank and use the ticket ID to check replies
                           </p>
                         )}
                       </div>
 
-                      <Button variant="hero" type="submit" className="w-full" disabled={loading}>
+                      <Button
+                        variant="hero"
+                        type="submit"
+                        className="w-full"
+                        disabled={loading}
+                        aria-busy={loading}
+                      >
                         {loading ? (
                           <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Sending...
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden="true" />
+                            Sending…
                           </>
                         ) : (
                           <>
-                            <Mail className="h-4 w-4 mr-2" />
+                            <Mail className="h-4 w-4 mr-2" aria-hidden="true" />
                             Send Message
                           </>
                         )}
@@ -217,32 +261,42 @@ export default function Contact() {
                   </>
                 ) : (
                   <div className="text-center py-8">
-                    <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-6">
-                      <CheckCircle2 className="h-8 w-8 text-success" />
-                    </div>
-                    <h2 className="font-heading font-semibold text-xl mb-2">
-                      Message Sent
-                    </h2>
-                    <p className="text-muted-foreground mb-6">
-                      Your message has been received successfully
-                    </p>
-                    
-                    <div className="p-4 rounded-xl bg-secondary border border-primary/30 mb-6">
-                      <p className="text-sm text-muted-foreground mb-2">
-                        Ticket ID
-                      </p>
-                      <code className="text-2xl font-mono font-bold text-primary select-all">
-                        {ticketId}
-                      </code>
+                    <div
+                      className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-6"
+                      aria-hidden="true"
+                    >
+                      <svg
+                        className="h-8 w-8 text-success"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                        aria-hidden="true"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
                     </div>
 
-                    <p className="text-sm text-muted-foreground">
-                      Save this ID to track your request
-                    </p>
+                    <SuccessMessage
+                      ref={successRef}
+                      title="Message Sent"
+                      description="Your message has been received successfully."
+                      className="mb-6 text-left"
+                    >
+                      <div className="mt-4 p-4 rounded-xl bg-secondary border border-primary/30">
+                        <p className="text-sm text-muted-foreground mb-2">Ticket ID</p>
+                        <code className="text-2xl font-mono font-bold text-primary select-all block">
+                          {ticketId}
+                        </code>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-3">
+                        Save this ID to track your request
+                      </p>
+                    </SuccessMessage>
 
                     <Button
                       variant="outline"
-                      className="mt-6"
+                      className="mt-2"
                       onClick={handleNewMessage}
                     >
                       Send new message
@@ -255,7 +309,7 @@ export default function Contact() {
               <div className="space-y-6">
                 <div className="glass-card p-6">
                   <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0" aria-hidden="true">
                       <Shield className="h-5 w-5 text-primary" />
                     </div>
                     <div>
@@ -270,7 +324,7 @@ export default function Contact() {
 
                 <div className="glass-card p-6">
                   <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0" aria-hidden="true">
                       <Clock className="h-5 w-5 text-primary" />
                     </div>
                     <div>
@@ -285,7 +339,7 @@ export default function Contact() {
 
                 <div className="glass-card p-6">
                   <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0" aria-hidden="true">
                       <Key className="h-5 w-5 text-primary" />
                     </div>
                     <div>
@@ -300,7 +354,7 @@ export default function Contact() {
 
                 <div className="glass-card p-6">
                   <h3 className="font-heading font-semibold mb-4 flex items-center gap-2">
-                    <Key className="h-4 w-4 text-primary" />
+                    <Key className="h-4 w-4 text-primary" aria-hidden="true" />
                     Public PGP Key
                   </h3>
                   <div className="p-4 rounded-lg bg-secondary font-mono text-xs text-muted-foreground overflow-x-auto">
@@ -311,7 +365,7 @@ export default function Contact() {
                 </div>
 
                 <div className="p-4 rounded-xl bg-warning/5 border border-warning/20 flex items-start gap-3">
-                  <AlertCircle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
+                  <AlertCircle className="h-5 w-5 text-warning shrink-0 mt-0.5" aria-hidden="true" />
                   <div>
                     <p className="font-medium text-warning mb-1">Warning</p>
                     <p className="text-sm text-muted-foreground">

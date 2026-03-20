@@ -72,11 +72,12 @@ export function ConfirmationSummary({
           className="flex-1"
           onClick={onConfirm}
           disabled={loading}
+          aria-busy={loading}
         >
           {loading ? (
             <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Creating session...
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden="true" />
+              Creating session…
             </>
           ) : (
             "Confirm and Generate Address"

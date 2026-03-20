@@ -1,7 +1,7 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, Plus, Loader2 } from "lucide-react";
+import { AlertTriangle, Plus } from "lucide-react";
 import { ProgressSteps, type MixingStep } from "@/components/mixing/ProgressSteps";
 import { DestinationList, type DestinationAddress } from "@/components/mixing/DestinationList";
 import { DelayConfiguration } from "@/components/mixing/DelayConfiguration";
@@ -11,6 +11,8 @@ import { SERVICE_CONFIG } from "@/lib/constants";
 import { isValidBitcoinAddress } from "@/lib/validation";
 import { createMixSession, type MixSessionResponse } from "@/lib/api";
 import type { MixSession } from "@/lib/mock-session";
+import { InlineError } from "@/components/system/feedback/InlineError";
+import { ErrorBoundary } from "@/components/system/ErrorBoundary";
 
 export default function MixingPage() {
   const [step, setStep] = useState<MixingStep>("configure");
@@ -21,6 +23,9 @@ export default function MixingPage() {
   const [session, setSession] = useState<MixSession | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Ref to error block for focus management
+  const errorRef = useRef<HTMLDivElement>(null);
 
   const addDestination = useCallback(() => {
     if (destinations.length >= SERVICE_CONFIG.maxDestinations) return;
@@ -83,10 +88,13 @@ export default function MixingPage() {
     const result = await createMixSession();
 
     if (result.error) {
-      setError(result.status === 429 
+      const msg = result.status === 429 
         ? "Too many requests. Please wait a few minutes." 
-        : result.error.message);
+        : result.error.message;
+      setError(msg);
       setLoading(false);
+      // Focus the error block for screen readers
+      requestAnimationFrame(() => errorRef.current?.focus());
       return;
     }
 
@@ -151,8 +159,9 @@ export default function MixingPage() {
                       size="sm"
                       onClick={addDestination}
                       disabled={destinations.length >= SERVICE_CONFIG.maxDestinations}
+                      aria-label={`Add destination address (${destinations.length} of ${SERVICE_CONFIG.maxDestinations})`}
                     >
-                      <Plus className="h-4 w-4 mr-1" />
+                      <Plus className="h-4 w-4 mr-1" aria-hidden="true" />
                       Add
                     </Button>
                   </div>
@@ -165,8 +174,11 @@ export default function MixingPage() {
                   />
 
                   {totalPercentage !== 100 && (
-                    <div className="mt-4 p-3 rounded-lg bg-warning/10 border border-warning/20 flex items-center gap-2">
-                      <AlertTriangle className="h-4 w-4 text-warning shrink-0" />
+                    <div
+                      role="alert"
+                      className="mt-4 p-3 rounded-lg bg-warning/10 border border-warning/20 flex items-center gap-2"
+                    >
+                      <AlertTriangle className="h-4 w-4 text-warning shrink-0" aria-hidden="true" />
                       <span className="text-sm text-warning">
                         Total must be 100%. Current: {totalPercentage}%
                       </span>
@@ -179,7 +191,7 @@ export default function MixingPage() {
 
                 {/* Warning */}
                 <div className="p-4 rounded-xl bg-warning/5 border border-warning/20 flex items-start gap-3">
-                  <AlertTriangle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
+                  <AlertTriangle className="h-5 w-5 text-warning shrink-0 mt-0.5" aria-hidden="true" />
                   <div>
                     <p className="font-medium text-warning mb-1">
                       Warning: Irreversible Operation
@@ -197,6 +209,7 @@ export default function MixingPage() {
                   className="w-full"
                   onClick={() => setStep("confirm")}
                   disabled={!canProceed}
+                  aria-disabled={!canProceed}
                 >
                   Review Configuration
                 </Button>
@@ -205,27 +218,24 @@ export default function MixingPage() {
 
             {/* Step: Confirm */}
             {step === "confirm" && (
-              <div className="space-y-4">
-                {error && (
-                  <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 flex items-start gap-3">
-                    <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-medium text-destructive mb-1">Error</p>
-                      <p className="text-sm text-muted-foreground">{error}</p>
-                      <Button variant="outline" size="sm" className="mt-2" onClick={() => setError(null)}>
-                        Dismiss
-                      </Button>
-                    </div>
-                  </div>
-                )}
-                <ConfirmationSummary
-                  destinations={destinations}
-                  delay={delay[0]}
-                  onBack={() => { setStep("configure"); setError(null); }}
-                  onConfirm={handleConfirm}
-                  loading={loading}
-                />
-              </div>
+              <ErrorBoundary>
+                <div className="space-y-4">
+                  {error && (
+                    <InlineError
+                      ref={errorRef}
+                      message={error}
+                      onRetry={() => { setError(null); handleConfirm(); }}
+                    />
+                  )}
+                  <ConfirmationSummary
+                    destinations={destinations}
+                    delay={delay[0]}
+                    onBack={() => { setStep("configure"); setError(null); }}
+                    onConfirm={handleConfirm}
+                    loading={loading}
+                  />
+                </div>
+              </ErrorBoundary>
             )}
 
             {/* Step: Deposit */}
