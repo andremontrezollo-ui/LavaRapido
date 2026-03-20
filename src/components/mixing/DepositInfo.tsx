@@ -10,7 +10,8 @@ interface DepositInfoProps {
 }
 
 export function DepositInfo({ session, onNewOperation }: DepositInfoProps) {
-  const { copied, copy } = useClipboard();
+  const { copied: copiedAddress, copy: copyAddress } = useClipboard();
+  const { copied: copiedSession, copy: copySession } = useClipboard();
 
   return (
     <div className="space-y-8 animate-fade-up">
@@ -36,10 +37,25 @@ export function DepositInfo({ session, onNewOperation }: DepositInfoProps) {
 
         {/* Session Info */}
         <div className="mb-4 text-left p-4 rounded-lg bg-secondary/50 space-y-1 text-sm">
-          <p className="text-muted-foreground">
-            <span className="font-medium text-foreground">Session:</span>{" "}
-            <code className="font-mono text-xs">{session.sessionId}</code>
-          </p>
+          <div className="flex items-center gap-1">
+            <span className="font-medium text-foreground">Session:</span>
+            <code className="font-mono text-xs text-muted-foreground flex-1 truncate">
+              {session.sessionId}
+            </code>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 shrink-0"
+              onClick={() => copySession(session.sessionId)}
+              aria-label="Copy session ID"
+            >
+              {copiedSession ? (
+                <CheckCircle2 className="h-3.5 w-3.5 text-success" />
+              ) : (
+                <Copy className="h-3.5 w-3.5" />
+              )}
+            </Button>
+          </div>
           <p className="text-muted-foreground">
             <span className="font-medium text-foreground">Expires:</span>{" "}
             {session.expiresAt.toLocaleTimeString()}
@@ -56,11 +72,11 @@ export function DepositInfo({ session, onNewOperation }: DepositInfoProps) {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => copy(session.depositAddress)}
+              onClick={() => copyAddress(session.depositAddress)}
               className="shrink-0"
               aria-label="Copy deposit address"
             >
-              {copied ? (
+              {copiedAddress ? (
                 <CheckCircle2 className="h-5 w-5 text-success" />
               ) : (
                 <Copy className="h-5 w-5" />

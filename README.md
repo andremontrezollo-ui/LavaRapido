@@ -1,133 +1,165 @@
-# Welcome to ShadowMix
+# ShadowMix
 
-A privacy-focused Bitcoin mixing service built with React, TypeScript, and Tailwind CSS.
+A privacy-focused Bitcoin mixing service.
 
-## Project Overview
+## Architecture Overview
 
-ShadowMix is a web application that provides Bitcoin transaction privacy services through a mixing mechanism that breaks the link between input and output addresses.
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Frontend (src/)                                            │
+│  React 18 + TypeScript + Vite                               │
+│  Calls Edge Functions exclusively via src/lib/api.ts        │
+└─────────────────────┬───────────────────────────────────────┘
+                      │ HTTPS / Supabase anon key
+┌─────────────────────▼───────────────────────────────────────┐
+│  Official Backend: Supabase Edge Functions                  │
+│  supabase/functions/  (Deno runtime)                        │
+│  ├── mix-sessions        POST  Create mixing session        │
+│  ├── mix-session-status  POST  Query session status         │
+│  ├── contact             POST  Create support ticket        │
+│  ├── health              GET   Health check                 │
+│  └── cleanup             POST  Expire sessions              │
+└─────────────────────┬───────────────────────────────────────┘
+                      │
+┌─────────────────────▼───────────────────────────────────────┐
+│  Domain Library (backend/src/)                              │
+│  Pure TypeScript — no HTTP server, no process to start      │
+│  Clean Architecture + DDD modules                           │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**There is one official backend: Supabase Edge Functions.**  
+`backend/src/` is a domain library that Edge Functions may import from. It is not a server.
 
 ## Tech Stack
 
-- **Frontend Framework**: React 18 with TypeScript
-- **Build Tool**: Vite
-- **Styling**: Tailwind CSS with custom design system
-- **UI Components**: shadcn/ui (Radix UI primitives)
-- **Routing**: React Router v6
-- **State Management**: React Query (TanStack Query)
-- **Form Validation**: Zod
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 18, TypeScript, Vite, Tailwind CSS, shadcn/ui, React Router v6, React Query, Zod |
+| Backend (HTTP) | Supabase Edge Functions (Deno) |
+| Database | Supabase PostgreSQL |
+| Domain Library | TypeScript, Clean Architecture + DDD |
+| Package Manager | npm |
 
 ## Project Structure
 
 ```
-src/
-├── components/
-│   ├── home/           # Homepage sections
-│   ├── layout/         # Layout components (Header, Footer, Layout)
-│   ├── mixing/         # Mixing flow components
-│   └── ui/             # shadcn/ui components
-├── hooks/              # Custom React hooks
-├── lib/                # Utilities and configuration
-│   ├── constants.ts    # Application constants
-│   ├── utils.ts        # Utility functions
-│   └── validation.ts   # Input validation schemas
-├── pages/              # Page components
-└── test/               # Test configuration
+round1/
+├── src/                      # React frontend
+│   ├── components/           # UI components
+│   ├── hooks/                # Custom React hooks
+│   ├── lib/
+│   │   ├── api.ts            # Edge Function client (single integration point)
+│   │   ├── constants.ts      # Application constants
+│   │   ├── utils.ts          # Utility functions
+│   │   └── validation.ts     # Zod validation schemas
+│   ├── pages/                # Page components
+│   └── integrations/supabase/ # Supabase client
+├── supabase/                 # Official backend
+│   ├── functions/            # Edge Functions (Deno — the HTTP runtime)
+│   │   ├── _shared/          # Shared utilities (rate-limiter, logger, headers)
+│   │   ├── mix-sessions/     # POST /functions/v1/mix-sessions
+│   │   ├── mix-session-status/ # POST /functions/v1/mix-session-status
+│   │   ├── contact/          # POST /functions/v1/contact
+│   │   ├── health/           # GET  /functions/v1/health
+│   │   └── cleanup/          # POST /functions/v1/cleanup
+│   └── migrations/           # PostgreSQL migrations
+├── backend/                  # Domain library (NO HTTP server)
+│   └── src/
+│       ├── modules/          # DDD modules (address-generator, blockchain-monitor, etc.)
+│       ├── shared/           # Shared kernel
+│       └── infra/            # In-memory implementations
+├── docs/                     # Architecture and API documentation
+│   ├── architecture.md       # System architecture
+│   ├── api-contract.md       # API contract for Edge Functions
+│   └── SECURITY.md           # Security guidelines
+└── .env.example              # Environment variable template (copy to .env)
 ```
 
 ## Development
 
 ### Prerequisites
 
-- Node.js 18+ or Bun
-- npm, yarn, or bun
+- Node.js 18+
+- npm
+- Supabase CLI (for Edge Functions: `npm install -g supabase`)
 
 ### Getting Started
 
 ```bash
-# Install dependencies
+# 1. Install frontend dependencies
 npm install
 
-# Start development server
+# 2. Configure environment
+cp .env.example .env
+# Edit .env and fill in your Supabase project credentials
+
+# 3. Start frontend development server
 npm run dev
 
-# Build for production
-npm run build
-
-# Run tests
-npm test
-
-# Type checking
-npm run typecheck
-
-# Linting
-npm run lint
+# 4. Start Edge Functions locally (separate terminal)
+supabase start
+supabase functions serve
 ```
 
 ### Environment Variables
 
-This project does not require any environment variables for frontend operation. All configuration is handled through `src/lib/constants.ts`.
+Copy `.env.example` to `.env` and fill in your Supabase project details:
 
-For backend functionality (when implemented via Lovable Cloud):
-- API keys and secrets should be stored in Lovable Cloud secrets
-- Never commit secrets to the repository
+```
+VITE_SUPABASE_URL=https://<your-project-id>.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=<your-anon-public-key>
+VITE_SUPABASE_PROJECT_ID=<your-project-id>
+```
 
-## Security Considerations
+**Never commit `.env` to version control.** The `.gitignore` already excludes it.
 
-### Input Validation
+### Scripts
 
-All user inputs are validated using Zod schemas:
-- Bitcoin addresses are validated against standard patterns (Legacy, P2SH, Bech32, Bech32m)
-- Contact form inputs are sanitized and length-limited
-- All validation occurs both client-side and server-side (when backend is implemented)
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start Vite dev server |
+| `npm run build` | Production build |
+| `npm run lint` | ESLint |
+| `npm test` | Vitest unit tests |
+| `supabase functions serve` | Serve Edge Functions locally |
+| `supabase db push` | Apply migrations |
 
-### Best Practices Implemented
+## API
 
-- ✅ No hardcoded secrets in codebase
-- ✅ Input sanitization and validation
-- ✅ XSS prevention through React's built-in escaping
-- ✅ Secure random ID generation using `crypto.getRandomValues()`
-- ✅ Proper TypeScript types for type safety
-- ✅ Component-level separation of concerns
-- ✅ Lazy loading for performance optimization
+All HTTP endpoints are Supabase Edge Functions. See [`docs/api-contract.md`](docs/api-contract.md) for the full contract.
 
-### Recommendations for Production
+Base URL: `{SUPABASE_URL}/functions/v1/{function-name}`
 
-1. **Backend Security**: Implement server-side validation for all operations
-2. **Rate Limiting**: Add rate limiting for form submissions
-3. **CSP Headers**: Configure Content Security Policy headers
-4. **HTTPS**: Ensure all traffic is served over HTTPS
-5. **Monitoring**: Implement error tracking and monitoring
-6. **Auditing**: Regular security audits of dependencies
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/functions/v1/mix-sessions` | POST | Create mixing session |
+| `/functions/v1/mix-session-status` | POST | Query session status |
+| `/functions/v1/contact` | POST | Create support ticket |
+| `/functions/v1/health` | GET | Health check |
+| `/functions/v1/cleanup` | POST | Expire sessions (maintenance) |
 
 ## Deployment
 
-The application can be deployed via Lovable's publish feature:
+1. **Frontend**: Deploy via Lovable (Share → Publish) or any static host.
+2. **Edge Functions**: `supabase functions deploy`
+3. **Database**: `supabase db push`
 
-1. Open the project in Lovable
-2. Click Share → Publish
-3. Optionally configure a custom domain
+## Security
 
-## Architecture Principles
+- Input validation via Zod (frontend) and manual validation (Edge Functions)
+- Rate limiting per IP on all write endpoints
+- Security headers on all Edge Function responses
+- No secrets committed to the repository
+- See [`docs/SECURITY.md`](docs/SECURITY.md) for details
 
-The project follows these architectural principles (documented in `docs/backend/`):
+## Architecture Documentation
 
-- **Separation of Responsibilities**: Each module has a single purpose
-- **Low Coupling / High Cohesion**: Components communicate through well-defined interfaces
-- **Privacy by Architecture**: Minimal data collection and segregated contexts
-- **Security by Design**: Defense in depth, no secrets in application code
-- **Controlled Auditability**: Privacy-preserving logging
-
-## Contributing
-
-When contributing to this project:
-
-1. Follow the existing code style and conventions
-2. Add proper TypeScript types
-3. Validate all user inputs
-4. Use semantic design tokens from the design system
-5. Write meaningful commit messages
-6. Test your changes before submitting
+- [`docs/architecture.md`](docs/architecture.md) — Full architecture diagram and module descriptions
+- [`docs/api-contract.md`](docs/api-contract.md) — API contracts and error formats
+- [`backend/README.md`](backend/README.md) — Domain library structure
 
 ## License
 
-This project is proprietary. All rights reserved.
+Proprietary. All rights reserved.
+
