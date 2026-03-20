@@ -7,9 +7,9 @@ import { logInfo, logWarn, logError, generateRequestId } from "../_shared/struct
 const TESTNET_CHARSET = "0123456789abcdefghijklmnopqrstuvwxyz";
 
 function generateMockTestnetAddress(): string {
-  const body = new Uint8Array(38);
-  crypto.getRandomValues(body);
-  const encoded = Array.from(body, (b) => TESTNET_CHARSET[b % TESTNET_CHARSET.length]).join("");
+  const randomBytes = new Uint8Array(38);
+  crypto.getRandomValues(randomBytes);
+  const encoded = Array.from(randomBytes, (byte) => TESTNET_CHARSET[byte % TESTNET_CHARSET.length]).join("");
   return `tb1q${encoded.slice(0, 38)}`;
 }
 
@@ -30,11 +30,11 @@ Deno.serve(async (req) => {
     );
 
     // Rate limit: max 10 sessions per 10 minutes per IP
-    const rl = await checkRateLimit(ipHash, { endpoint: "mix-sessions", maxRequests: 10, windowSeconds: 600 }, supabase);
+    const rateLimitResult = await checkRateLimit(ipHash, { endpoint: "mix-sessions", maxRequests: 10, windowSeconds: 600 }, supabase);
 
-    if (!rl.allowed) {
+    if (!rateLimitResult.allowed) {
       logWarn("Rate limit triggered", { requestId, endpoint: "mix-sessions", rateLimitTriggered: true, status: 429 });
-      return rateLimitError(rl.retryAfterSeconds);
+      return rateLimitError(rateLimitResult.retryAfterSeconds);
     }
 
     await recordRateLimit(ipHash, "mix-sessions", supabase);

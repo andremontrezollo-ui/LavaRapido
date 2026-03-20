@@ -13,7 +13,7 @@ const TESTNET_CHARSET = "0123456789abcdefghijklmnopqrstuvwxyz";
 function randomHex(length: number): string {
   const array = new Uint8Array(length);
   crypto.getRandomValues(array);
-  return Array.from(array, (b) => b.toString(16).padStart(2, "0")).join("");
+  return Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 /**
@@ -21,9 +21,9 @@ function randomHex(length: number): string {
  * These are NOT valid on-chain — purely for UI demonstration.
  */
 export function generateMockTestnetAddress(): string {
-  const body = new Uint8Array(38);
-  crypto.getRandomValues(body);
-  const encoded = Array.from(body, (b) => TESTNET_CHARSET[b % TESTNET_CHARSET.length]).join("");
+  const randomBytes = new Uint8Array(38);
+  crypto.getRandomValues(randomBytes);
+  const encoded = Array.from(randomBytes, (byte) => TESTNET_CHARSET[byte % TESTNET_CHARSET.length]).join("");
   return `tb1q${encoded.slice(0, 38)}`;
 }
 

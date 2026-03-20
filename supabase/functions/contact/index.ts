@@ -18,7 +18,7 @@ function generateTicketId(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   const array = new Uint8Array(6);
   crypto.getRandomValues(array);
-  return "TKT-" + Array.from(array, (b) => chars[b % chars.length]).join("");
+  return "TKT-" + Array.from(array, (byte) => chars[byte % chars.length]).join("");
 }
 
 function validatePayload(body: unknown): { valid: true; data: { subject: string; message: string; replyContact: string } } | { valid: false; error: string } {
@@ -62,11 +62,11 @@ Deno.serve(async (req) => {
     );
 
     // Rate limit: max 5 tickets per 10 minutes per IP
-    const rl = await checkRateLimit(ipHash, { endpoint: "contact", maxRequests: 5, windowSeconds: 600 }, supabase);
+    const rateLimitResult = await checkRateLimit(ipHash, { endpoint: "contact", maxRequests: 5, windowSeconds: 600 }, supabase);
 
-    if (!rl.allowed) {
+    if (!rateLimitResult.allowed) {
       logWarn("Rate limit triggered", { requestId, endpoint: "contact", rateLimitTriggered: true, status: 429 });
-      return rateLimitError(rl.retryAfterSeconds);
+      return rateLimitError(rateLimitResult.retryAfterSeconds);
     }
 
     let body: unknown;

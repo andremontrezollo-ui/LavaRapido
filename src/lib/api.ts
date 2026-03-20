@@ -22,7 +22,7 @@ async function callFunction<T>(functionName: string, body?: unknown, method: "PO
   const url = `${SUPABASE_URL}/functions/v1/${functionName}`;
 
   try {
-    const res = await fetch(url, {
+    const response = await fetch(url, {
       method,
       headers: {
         "Content-Type": "application/json",
@@ -31,17 +31,17 @@ async function callFunction<T>(functionName: string, body?: unknown, method: "PO
       body: body ? JSON.stringify(body) : undefined,
     });
 
-    const json = await res.json();
+    const responseData = await response.json();
 
-    if (!res.ok) {
+    if (!response.ok) {
       // Handle standardized error format
-      const errorDetail: ApiErrorDetail = json.error?.code
-        ? json.error
-        : { code: "UNKNOWN_ERROR", message: json.error || "Unknown error" };
-      return { error: errorDetail, status: res.status };
+      const errorDetail: ApiErrorDetail = responseData.error?.code
+        ? responseData.error
+        : { code: "UNKNOWN_ERROR", message: responseData.error || "Unknown error" };
+      return { error: errorDetail, status: response.status };
     }
 
-    return { data: json as T, status: res.status };
+    return { data: responseData as T, status: response.status };
   } catch {
     return {
       error: { code: "NETWORK_ERROR", message: "Network error. Please check your connection." },
