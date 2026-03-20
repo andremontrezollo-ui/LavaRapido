@@ -42,11 +42,11 @@ export class LogRetentionPolicy implements ExplainablePolicy<RetentionInput, Ret
   }
 
   explain(input: RetentionInput): string {
-    const r = this.evaluate(input);
-    if (r.shouldDelete) {
-      return `${input.dataClass} data aged ${r.ageSeconds}s exceeds retention of ${r.retentionSeconds}s. ${r.shouldArchive ? 'Archive before delete.' : 'Delete immediately.'}`;
+    const retentionResult = this.evaluate(input);
+    if (retentionResult.shouldDelete) {
+      return `${input.dataClass} data aged ${retentionResult.ageSeconds}s exceeds retention of ${retentionResult.retentionSeconds}s. ${retentionResult.shouldArchive ? 'Archive before delete.' : 'Delete immediately.'}`;
     }
-    return `${input.dataClass} data aged ${r.ageSeconds}s within retention of ${r.retentionSeconds}s.`;
+    return `${input.dataClass} data aged ${retentionResult.ageSeconds}s within retention of ${retentionResult.retentionSeconds}s.`;
   }
 }
 

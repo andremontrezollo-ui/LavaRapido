@@ -13,9 +13,9 @@ const REDACTION_PATTERNS = [
 ];
 
 function redact(text: string): string {
-  let r = text;
-  for (const p of REDACTION_PATTERNS) r = r.replace(p, "[REDACTED]");
-  return r;
+  let redactedText = text;
+  for (const pattern of REDACTION_PATTERNS) redactedText = redactedText.replace(pattern, "[REDACTED]");
+  return redactedText;
 }
 
 export interface LogContext {
@@ -29,8 +29,8 @@ export interface LogContext {
 
 function formatLog(level: string, message: string, ctx: LogContext): string {
   const safe: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(ctx)) {
-    safe[k] = typeof v === "string" ? redact(v) : v;
+  for (const [key, value] of Object.entries(ctx)) {
+    safe[key] = typeof value === "string" ? redact(value) : value;
   }
   return JSON.stringify({ level, message: redact(message), ...safe, timestamp: new Date().toISOString() });
 }
