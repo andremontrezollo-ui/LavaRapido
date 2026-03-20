@@ -1,8 +1,12 @@
 # ShadowMix — Architecture Document
 
-## Overview
+## Official Backend
 
-ShadowMix follows **Clean Architecture + Domain-Driven Design (DDD)** with strict module boundaries and event-driven inter-module communication.
+**The sole official HTTP backend is Supabase Edge Functions** (`supabase/functions/`, Deno runtime).
+
+`backend/src/` is a **domain library** — it contains no HTTP server and runs no process. Edge Functions may import domain modules from it, but `backend/src/` is not a concurrent backend.
+
+The frontend (`src/`) calls Edge Functions exclusively via `src/lib/api.ts`.
 
 ## Module Diagram
 
