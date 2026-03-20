@@ -1,115 +1,16 @@
-import { useState, useCallback, useMemo } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, Plus, Loader2 } from "lucide-react";
-import { ProgressSteps, type MixingStep } from "@/components/mixing/ProgressSteps";
-import { DestinationList, type DestinationAddress } from "@/components/mixing/DestinationList";
+import { AlertTriangle, Plus } from "lucide-react";
+import { ProgressSteps } from "@/components/mixing/ProgressSteps";
+import { DestinationList } from "@/components/mixing/DestinationList";
 import { DelayConfiguration } from "@/components/mixing/DelayConfiguration";
 import { ConfirmationSummary } from "@/components/mixing/ConfirmationSummary";
 import { DepositInfo } from "@/components/mixing/DepositInfo";
 import { SERVICE_CONFIG } from "@/lib/constants";
-import { isValidBitcoinAddress } from "@/lib/validation";
-import { createMixSession, type MixSessionResponse } from "@/lib/api";
-import type { MixSession } from "@/lib/mock-session";
+import { useMixingFlow } from "@/features/mixing/hooks/useMixingFlow";
 
 export default function MixingPage() {
-  const [step, setStep] = useState<MixingStep>("configure");
-  const [destinations, setDestinations] = useState<DestinationAddress[]>([
-    { id: "1", address: "", percentage: 100 },
-  ]);
-  const [delay, setDelay] = useState<number[]>([SERVICE_CONFIG.defaultDelay]);
-  const [session, setSession] = useState<MixSession | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const addDestination = useCallback(() => {
-    if (destinations.length >= SERVICE_CONFIG.maxDestinations) return;
-    
-    const newPercentage = Math.floor(100 / (destinations.length + 1));
-    const updatedDestinations = destinations.map((d) => ({
-      ...d,
-      percentage: newPercentage,
-    }));
-    updatedDestinations.push({
-      id: Date.now().toString(),
-      address: "",
-      percentage: 100 - newPercentage * destinations.length,
-    });
-    setDestinations(updatedDestinations);
-  }, [destinations]);
-
-  const removeDestination = useCallback((id: string) => {
-    if (destinations.length <= 1) return;
-    
-    const filtered = destinations.filter((d) => d.id !== id);
-    const perAddress = Math.floor(100 / filtered.length);
-    const remainder = 100 - perAddress * (filtered.length - 1);
-    setDestinations(
-      filtered.map((d, i) => ({
-        ...d,
-        percentage: i === filtered.length - 1 ? remainder : perAddress,
-      }))
-    );
-  }, [destinations]);
-
-  const updateAddress = useCallback((id: string, address: string) => {
-    setDestinations((prev) =>
-      prev.map((d) => (d.id === id ? { ...d, address: address.trim() } : d))
-    );
-  }, []);
-
-  const updatePercentage = useCallback((id: string, percentage: number) => {
-    setDestinations((prev) =>
-      prev.map((d) => (d.id === id ? { ...d, percentage } : d))
-    );
-  }, []);
-
-  const allAddressesValid = useMemo(() => 
-    destinations.every((d) => d.address && isValidBitcoinAddress(d.address)),
-    [destinations]
-  );
-
-  const totalPercentage = useMemo(() => 
-    destinations.reduce((sum, d) => sum + d.percentage, 0),
-    [destinations]
-  );
-
-  const canProceed = allAddressesValid && totalPercentage === 100;
-
-  const handleConfirm = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
-    const result = await createMixSession();
-
-    if (result.error) {
-      setError(result.status === 429 
-        ? "Too many requests. Please wait a few minutes." 
-        : result.error.message);
-      setLoading(false);
-      return;
-    }
-
-    if (result.data) {
-      setSession({
-        sessionId: result.data.sessionId,
-        depositAddress: result.data.depositAddress,
-        createdAt: new Date(result.data.createdAt),
-        expiresAt: new Date(result.data.expiresAt),
-        status: "pending_deposit",
-      });
-      setStep("deposit");
-    }
-    setLoading(false);
-  }, []);
-
-  const handleNewOperation = useCallback(() => {
-    setStep("configure");
-    setDestinations([{ id: "1", address: "", percentage: 100 }]);
-    setDelay([SERVICE_CONFIG.defaultDelay]);
-    setSession(null);
-    setError(null);
-  }, []);
+  const flow = useMixingFlow();
 
   return (
     <Layout>
@@ -130,10 +31,10 @@ export default function MixingPage() {
             </div>
 
             {/* Progress Steps */}
-            <ProgressSteps currentStep={step} />
+            <ProgressSteps currentStep={flow.step} />
 
             {/* Step: Configure */}
-            {step === "configure" && (
+            {flow.step === "configure" && (
               <div className="space-y-8 animate-fade-up">
                 {/* Destination Addresses */}
                 <div className="glass-card p-6 md:p-8">
@@ -149,8 +50,8 @@ export default function MixingPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={addDestination}
-                      disabled={destinations.length >= SERVICE_CONFIG.maxDestinations}
+                      onClick={flow.addDestination}
+                      disabled={flow.destinations.length >= SERVICE_CONFIG.maxDestinations}
                     >
                       <Plus className="h-4 w-4 mr-1" />
                       Add
@@ -158,24 +59,24 @@ export default function MixingPage() {
                   </div>
 
                   <DestinationList
-                    destinations={destinations}
-                    onUpdateAddress={updateAddress}
-                    onUpdatePercentage={updatePercentage}
-                    onRemove={removeDestination}
+                    destinations={flow.destinations}
+                    onUpdateAddress={flow.updateAddress}
+                    onUpdatePercentage={flow.updatePercentage}
+                    onRemove={flow.removeDestination}
                   />
 
-                  {totalPercentage !== 100 && (
+                  {flow.totalPercentage !== 100 && (
                     <div className="mt-4 p-3 rounded-lg bg-warning/10 border border-warning/20 flex items-center gap-2">
                       <AlertTriangle className="h-4 w-4 text-warning shrink-0" />
                       <span className="text-sm text-warning">
-                        Total must be 100%. Current: {totalPercentage}%
+                        Total must be 100%. Current: {flow.totalPercentage}%
                       </span>
                     </div>
                   )}
                 </div>
 
                 {/* Delay Configuration */}
-                <DelayConfiguration delay={delay} onDelayChange={setDelay} />
+                <DelayConfiguration delay={flow.delay} onDelayChange={flow.setDelay} />
 
                 {/* Warning */}
                 <div className="p-4 rounded-xl bg-warning/5 border border-warning/20 flex items-start gap-3">
@@ -195,8 +96,8 @@ export default function MixingPage() {
                   variant="hero"
                   size="lg"
                   className="w-full"
-                  onClick={() => setStep("confirm")}
-                  disabled={!canProceed}
+                  onClick={flow.goToConfirm}
+                  disabled={!flow.canProceed}
                 >
                   Review Configuration
                 </Button>
@@ -204,35 +105,35 @@ export default function MixingPage() {
             )}
 
             {/* Step: Confirm */}
-            {step === "confirm" && (
+            {flow.step === "confirm" && (
               <div className="space-y-4">
-                {error && (
+                {flow.error && (
                   <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 flex items-start gap-3">
                     <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
                     <div>
                       <p className="font-medium text-destructive mb-1">Error</p>
-                      <p className="text-sm text-muted-foreground">{error}</p>
-                      <Button variant="outline" size="sm" className="mt-2" onClick={() => setError(null)}>
+                      <p className="text-sm text-muted-foreground">{flow.error}</p>
+                      <Button variant="outline" size="sm" className="mt-2" onClick={flow.goToConfigure}>
                         Dismiss
                       </Button>
                     </div>
                   </div>
                 )}
                 <ConfirmationSummary
-                  destinations={destinations}
-                  delay={delay[0]}
-                  onBack={() => { setStep("configure"); setError(null); }}
-                  onConfirm={handleConfirm}
-                  loading={loading}
+                  destinations={flow.destinations}
+                  delay={flow.delay[0]}
+                  onBack={flow.goToConfigure}
+                  onConfirm={flow.confirmMix}
+                  loading={flow.loading}
                 />
               </div>
             )}
 
             {/* Step: Deposit */}
-            {step === "deposit" && session && (
+            {flow.step === "deposit" && flow.session && (
               <DepositInfo
-                session={session}
-                onNewOperation={handleNewOperation}
+                session={flow.session}
+                onNewOperation={flow.resetFlow}
               />
             )}
           </div>
