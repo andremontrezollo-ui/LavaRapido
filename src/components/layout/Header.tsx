@@ -56,15 +56,16 @@ export function Header() {
             onClick={() => setIsOpen(!isOpen)}
             className="md:hidden p-2 text-foreground"
             aria-expanded={isOpen}
+            aria-controls="mobile-nav"
             aria-label={isOpen ? "Close menu" : "Open menu"}
           >
-            {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            {isOpen ? <X className="h-6 w-6" aria-hidden="true" /> : <Menu className="h-6 w-6" aria-hidden="true" />}
           </button>
         </div>
 
         {/* Mobile Nav */}
         {isOpen && (
-          <div className="md:hidden py-4 border-t border-border/50 animate-fade-up">
+          <div id="mobile-nav" className="md:hidden py-4 border-t border-border/50 animate-fade-up">
             <nav className="flex flex-col gap-2" aria-label="Mobile navigation">
               {NAV_ITEMS.map((item) => (
                 <Link
