@@ -34,6 +34,32 @@ src/
 └── test/               # Test configuration
 ```
 
+## Environment Setup
+
+1. Copy the example file:
+
+```bash
+cp .env.example .env
+```
+
+2. Fill in the variables:
+
+```
+VITE_SUPABASE_URL=...
+VITE_SUPABASE_ANON_KEY=...
+```
+
+3. Run the project:
+
+```bash
+npm install
+npm run dev
+```
+
+> ⚠️ **Important:** Never commit your `.env` file. It contains environment-specific configuration.
+
+> **Note:** The Supabase anon key is safe for frontend usage, but should not be hardcoded.
+
 ## Development
 
 ### Prerequisites
