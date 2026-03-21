@@ -1,15 +1,19 @@
-import { createConnection } from 'typeorm';
-import { User } from '../entities/User';
+/**
+ * Database connection — reads credentials from environment variables only.
+ * No hardcoded credentials. Fails fast if required variables are missing.
+ *
+ * NOTE: This module is part of the backend domain library.
+ * The production HTTP layer uses Supabase Edge Functions (supabase/functions/).
+ */
 
-const connection = createConnection({
-    type: 'mysql', // Set the database type
-    host: 'localhost', // Database host
-    port: 3306, // Database port
-    username: 'your_username', // Database username
-    password: 'your_password', // Database password
-    database: 'your_database_name', // Database name
-    entities: [User],
-    synchronize: true,
-});
+function requireEnv(key: string): string {
+  const value = process.env[key];
+  if (!value || value.trim() === "") {
+    throw new Error(`Missing required environment variable: ${key}`);
+  }
+  return value.trim();
+}
 
-export default connection;
+export function getDatabaseUrl(): string {
+  return requireEnv("DATABASE_URL");
+}
