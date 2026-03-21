@@ -26,5 +26,4 @@ export type { ValidationResult, CreateMixSessionInput, ContactInput } from './sc
 // Security
 export { hashIp, SECURITY_HEADERS } from './security/security-utils';
 
-// Validators (legacy)
-export { validateContactPayload, validateSessionId } from './validators/index';
+
