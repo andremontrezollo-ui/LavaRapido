@@ -65,11 +65,22 @@ npm run lint
 
 ### Environment Variables
 
-This project does not require any environment variables for frontend operation. All configuration is handled through `src/lib/constants.ts`.
+The frontend requires the following environment variables to connect to the backend (Supabase Edge Functions):
 
-For backend functionality (when implemented via Lovable Cloud):
-- API keys and secrets should be stored in Lovable Cloud secrets
-- Never commit secrets to the repository
+| Variable | Description |
+|----------|-------------|
+| `VITE_SUPABASE_URL` | Supabase project URL |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Supabase anon (publishable) key |
+
+Create a `.env` file at the project root with these values:
+
+```bash
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=your-anon-key
+```
+
+Application constants (fees, limits, UI config) are in `src/lib/constants.ts`.
+API keys and secrets used by Edge Functions must be stored as Supabase secrets — never commit them to the repository.
 
 ## Security Considerations
 
@@ -101,21 +112,38 @@ All user inputs are validated using Zod schemas:
 
 ## Deployment
 
-The application can be deployed via Lovable's publish feature:
+**Frontend**: Build with `npm run build`, then serve the `dist/` directory via any static hosting provider (Vercel, Netlify, Cloudflare Pages, etc.).
 
-1. Open the project in Lovable
-2. Click Share → Publish
-3. Optionally configure a custom domain
+**Backend (Edge Functions)**: Deploy via the Supabase CLI:
+
+```bash
+supabase functions deploy mix-sessions
+supabase functions deploy mix-session-status
+supabase functions deploy contact
+supabase functions deploy health
+supabase functions deploy cleanup
+```
+
+**Database**: Apply migrations with `supabase db push`.
 
 ## Architecture Principles
 
-The project follows these architectural principles (documented in `docs/backend/`):
+The project follows these architectural principles (documented in `docs/architecture.md` and `docs/adr/`):
 
 - **Separation of Responsibilities**: Each module has a single purpose
 - **Low Coupling / High Cohesion**: Components communicate through well-defined interfaces
 - **Privacy by Architecture**: Minimal data collection and segregated contexts
 - **Security by Design**: Defense in depth, no secrets in application code
 - **Controlled Auditability**: Privacy-preserving logging
+
+### Runtime Boundaries
+
+| Layer | Location | Role |
+|-------|----------|------|
+| Frontend | `src/` | React SPA — UI, client-side validation, API calls |
+| HTTP runtime | `supabase/functions/` | Deno Edge Functions — sole HTTP entry point |
+| Domain library | `backend/src/` | Pure TypeScript — domain logic, no HTTP server |
+| Database | `supabase/migrations/` | PostgreSQL schema via Supabase |
 
 ## Contributing
 
