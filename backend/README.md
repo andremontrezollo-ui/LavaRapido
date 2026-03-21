@@ -1,6 +1,14 @@
-# ShadowMix Backend Architecture
+# ShadowMix — Backend (Referência Conceitual)
 
-Privacy-focused backend modules following Clean Architecture principles.
+> ⚠️ **Este diretório NÃO representa o backend em execução do sistema. Ele é uma arquitetura de referência, alvo futuro ou laboratório conceitual.**
+>
+> O runtime HTTP real está exclusivamente em `supabase/functions/` (Deno Edge Functions).
+> Este diretório não é compilado, implantado, nem chamado pelo frontend em nenhuma circunstância.
+> Veja o [README principal](../README.md) para a arquitetura oficial em execução.
+
+---
+
+Módulos de domínio com foco em privacidade seguindo princípios de Clean Architecture.
 
 ## Module Structure
 
@@ -23,11 +31,14 @@ module/
 | `liquidity-pool` | Structural dissociation layer for fund aggregation |
 | `log-minimizer` | Automatic removal of sensitive metadata |
 
-## Cross-Cutting Concerns
+## Cross-Cutting Concerns (Referência Conceitual)
 
-- **api/**: REST endpoints for external communication
-- **shared/**: Minimal shared kernel (IDs, clocks, events)
-- **infra/**: Event bus, observability, storage abstractions
+> As entradas abaixo descrevem intenções arquiteturais de referência, não implementações ativas.
+> O único ponto de entrada HTTP do sistema real é `supabase/functions/`.
+
+- **api/**: Contratos e abstrações de interface HTTP (conceitual — não usado pelo frontend)
+- **shared/**: Kernel mínimo compartilhado (IDs, clocks, eventos)
+- **infra/**: Barramento de eventos, observabilidade, abstrações de storage
 
 ## Design Principles
 

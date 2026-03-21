@@ -13,9 +13,9 @@ import {
   AlertCircle,
   Loader2
 } from "lucide-react";
-import { contactFormSchema, type ContactFormData } from "@/lib/validation";
 import { VALIDATION_LIMITS } from "@/lib/constants";
-import { createContactTicket } from "@/lib/api";
+import { createContactTicket } from "@/api";
+import { validateContactForm, buildContactPayload, type ContactFormData } from "@/services/contact";
 
 interface FormErrors {
   subject?: string;
@@ -46,26 +46,17 @@ export default function Contact() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const result = contactFormSchema.safeParse(formData);
+    const result = validateContactForm(formData);
     
     if (!result.success) {
-      const fieldErrors: FormErrors = {};
-      result.error.errors.forEach((err) => {
-        const field = err.path[0] as keyof FormErrors;
-        fieldErrors[field] = err.message;
-      });
-      setErrors(fieldErrors);
+      setErrors(result.fieldErrors);
       return;
     }
 
     setLoading(true);
     setApiError(null);
 
-    const apiResult = await createContactTicket({
-      subject: formData.subject,
-      message: formData.message,
-      replyContact: formData.replyContact || undefined,
-    });
+    const apiResult = await createContactTicket(buildContactPayload(result.data));
 
     setLoading(false);
 

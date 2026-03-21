@@ -3,14 +3,20 @@ import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, Plus, Loader2 } from "lucide-react";
 import { ProgressSteps, type MixingStep } from "@/components/mixing/ProgressSteps";
-import { DestinationList, type DestinationAddress } from "@/components/mixing/DestinationList";
+import { DestinationList } from "@/components/mixing/DestinationList";
 import { DelayConfiguration } from "@/components/mixing/DelayConfiguration";
 import { ConfirmationSummary } from "@/components/mixing/ConfirmationSummary";
 import { DepositInfo } from "@/components/mixing/DepositInfo";
 import { SERVICE_CONFIG } from "@/lib/constants";
-import { isValidBitcoinAddress } from "@/lib/validation";
-import { createMixSession, type MixSessionResponse } from "@/lib/api";
+import { createMixSession } from "@/api";
 import type { MixSession } from "@/lib/mock-session";
+import {
+  type DestinationAddress,
+  addDestination,
+  removeDestination,
+  computeTotalPercentage,
+  computeCanProceed,
+} from "@/services/mixing";
 
 export default function MixingPage() {
   const [step, setStep] = useState<MixingStep>("configure");
@@ -22,35 +28,13 @@ export default function MixingPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const addDestination = useCallback(() => {
-    if (destinations.length >= SERVICE_CONFIG.maxDestinations) return;
-    
-    const newPercentage = Math.floor(100 / (destinations.length + 1));
-    const updatedDestinations = destinations.map((d) => ({
-      ...d,
-      percentage: newPercentage,
-    }));
-    updatedDestinations.push({
-      id: Date.now().toString(),
-      address: "",
-      percentage: 100 - newPercentage * destinations.length,
-    });
-    setDestinations(updatedDestinations);
-  }, [destinations]);
+  const addDestinationHandler = useCallback(() => {
+    setDestinations((prev) => addDestination(prev, SERVICE_CONFIG.maxDestinations));
+  }, []);
 
-  const removeDestination = useCallback((id: string) => {
-    if (destinations.length <= 1) return;
-    
-    const filtered = destinations.filter((d) => d.id !== id);
-    const perAddress = Math.floor(100 / filtered.length);
-    const remainder = 100 - perAddress * (filtered.length - 1);
-    setDestinations(
-      filtered.map((d, i) => ({
-        ...d,
-        percentage: i === filtered.length - 1 ? remainder : perAddress,
-      }))
-    );
-  }, [destinations]);
+  const removeDestinationHandler = useCallback((id: string) => {
+    setDestinations((prev) => removeDestination(prev, id));
+  }, []);
 
   const updateAddress = useCallback((id: string, address: string) => {
     setDestinations((prev) =>
@@ -64,17 +48,8 @@ export default function MixingPage() {
     );
   }, []);
 
-  const allAddressesValid = useMemo(() => 
-    destinations.every((d) => d.address && isValidBitcoinAddress(d.address)),
-    [destinations]
-  );
-
-  const totalPercentage = useMemo(() => 
-    destinations.reduce((sum, d) => sum + d.percentage, 0),
-    [destinations]
-  );
-
-  const canProceed = allAddressesValid && totalPercentage === 100;
+  const totalPercentage = useMemo(() => computeTotalPercentage(destinations), [destinations]);
+  const canProceed = useMemo(() => computeCanProceed(destinations), [destinations]);
 
   const handleConfirm = useCallback(async () => {
     setLoading(true);
@@ -149,7 +124,7 @@ export default function MixingPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={addDestination}
+                      onClick={addDestinationHandler}
                       disabled={destinations.length >= SERVICE_CONFIG.maxDestinations}
                     >
                       <Plus className="h-4 w-4 mr-1" />
@@ -161,7 +136,7 @@ export default function MixingPage() {
                     destinations={destinations}
                     onUpdateAddress={updateAddress}
                     onUpdatePercentage={updatePercentage}
-                    onRemove={removeDestination}
+                    onRemove={removeDestinationHandler}
                   />
 
                   {totalPercentage !== 100 && (
