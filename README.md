@@ -8,36 +8,34 @@ ShadowMix is a web application that provides Bitcoin transaction privacy service
 
 ## Arquitetura Oficial
 
-| Layer | Technology | Location |
-|-------|-----------|----------|
+O backend oficial em execução é **Supabase Edge Functions** (Deno). A persistência oficial é **Supabase** (PostgreSQL). O frontend consome o backend exclusivamente através da camada de API em `src/api/` (o arquivo `src/lib/api.ts` é um re-export de compatibilidade que aponta para `src/api/`). O diretório `/backend` **não é** o backend em execução — é apenas uma referência arquitetural conceitual.
+
+| Camada | Tecnologia | Localização |
+|--------|-----------|-------------|
 | **Frontend** | React 18 + Vite + TypeScript | `src/` |
-| **Backend** | Supabase Edge Functions (Deno) | `supabase/functions/` |
-| **Persistence** | Supabase (PostgreSQL + migrations) | `supabase/migrations/` |
-| **API Client** | TypeScript fetch wrapper | `src/api/` |
+| **Backend em execução** | Supabase Edge Functions (Deno) | `supabase/functions/` |
+| **Persistência** | Supabase (PostgreSQL + migrations) | `supabase/migrations/` |
+| **Camada de API (frontend)** | TypeScript fetch wrapper | `src/api/` (entry: `src/lib/api.ts`) |
 | **Supabase Client** | `@supabase/supabase-js` | `src/integrations/supabase/` |
 
-> **Note**: The `/backend` directory contains domain models and architectural blueprints only.
-> It is **not** an executable server and is **not** used by the frontend at runtime.
-> See [`backend/README.md`](./backend/README.md) for details.
+> **⚠️ Importante**: O diretório `/backend` contém modelos de domínio e blueprints arquiteturais apenas.
+> **Não é** um servidor executável e **não é** usado pelo frontend em runtime.
+> Veja [`backend/README.md`](./backend/README.md) para detalhes.
 
-### Request Flow
+### Fluxo de Requisição
 
 ```
-Browser (React UI)
+UI (React — src/pages/)
       │
       ▼
-src/services/mixing/   src/services/contact/
-  (pure business logic — no React, no I/O)
+src/services/   (lógica de negócio pura — sem React, sem I/O)
       │
       ▼
-src/api/
-  ├── client.ts          (HTTP transport layer)
-  ├── endpoints/mix.ts   (mix-sessions, mix-session-status)
-  ├── endpoints/contact.ts (contact ticket)
-  └── endpoints/health.ts  (health check)
+src/api/        (camada HTTP do frontend)
+  └── src/lib/api.ts  ← re-export de compatibilidade → src/api/
       │
       ▼
-Supabase Edge Functions  ({SUPABASE_URL}/functions/v1/...)
+Supabase Edge Functions  ({VITE_SUPABASE_URL}/functions/v1/...)
   ├── mix-sessions/
   ├── mix-session-status/
   ├── contact/
@@ -45,26 +43,29 @@ Supabase Edge Functions  ({SUPABASE_URL}/functions/v1/...)
   └── cleanup/
       │
       ▼
-Supabase PostgreSQL  (mix_sessions, contact_tickets, rate_limits)
+Supabase Database (PostgreSQL)
+  ├── mix_sessions
+  ├── contact_tickets
+  └── rate_limits
 ```
 
-### Environment Variables
+### Variáveis de Ambiente
 
-The following environment variables **must** be set for the application to function:
+As seguintes variáveis de ambiente **devem** ser configuradas para o funcionamento da aplicação:
 
-| Variable | Description |
-|----------|-------------|
-| `VITE_SUPABASE_URL` | Supabase project URL (e.g. `https://xyz.supabase.co`) |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | Supabase anon/publishable key |
+| Variável | Descrição |
+|----------|-----------|
+| `VITE_SUPABASE_URL` | URL do projeto Supabase (ex.: `https://xyz.supabase.co`) |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Chave anon/publishable do Supabase |
 
-Create a `.env` file at the project root:
+Crie um arquivo `.env` na raiz do projeto:
 
 ```bash
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=your-anon-key
 ```
 
-> Never commit secrets or service-role keys to the repository.
+> Nunca commit secrets ou service-role keys no repositório.
 
 ## Tech Stack
 
@@ -135,8 +136,9 @@ backend/                # ⚠️ Domain library / architectural blueprint only
 # Install dependencies
 npm install
 
-# Copy and fill in environment variables
-cp .env.example .env  # set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY
+# Create .env at the project root with:
+# VITE_SUPABASE_URL=https://your-project.supabase.co
+# VITE_SUPABASE_PUBLISHABLE_KEY=your-anon-key
 
 # Start development server
 npm run dev
@@ -146,9 +148,6 @@ npm run build
 
 # Run tests
 npm test
-
-# Type checking
-npm run typecheck
 
 # Linting
 npm run lint
@@ -179,8 +178,8 @@ All user inputs are validated using Zod schemas:
 ### Recommendations for Production
 
 1. **Backend Security**: Server-side validation is active in all Edge Functions
-2. **Rate Limiting**: Active via `supabase/functions/_shared/infra/rate-limiter.ts`
-3. **CSP Headers**: Configured in `supabase/functions/_shared/http/security-headers.ts`
+2. **Rate Limiting**: Active via `supabase/functions/_shared/rate-limiter.ts`
+3. **CSP Headers**: Configured in `supabase/functions/_shared/security-headers.ts`
 4. **HTTPS**: Enforced by Supabase infrastructure
 5. **Monitoring**: Structured JSON logging in all Edge Functions
 6. **Auditing**: Regular security audits of dependencies
