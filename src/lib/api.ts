@@ -3,8 +3,7 @@
  * Standardized /api/v1 pattern via Edge Functions
  */
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+import { env } from '@/config/env';
 
 export interface ApiErrorDetail {
   code: string;
@@ -19,14 +18,14 @@ interface ApiResponse<T> {
 }
 
 async function callFunction<T>(functionName: string, body?: unknown, method: "POST" | "GET" = "POST"): Promise<ApiResponse<T>> {
-  const url = `${SUPABASE_URL}/functions/v1/${functionName}`;
+  const url = `${env.supabaseUrl}/functions/v1/${functionName}`;
 
   try {
     const res = await fetch(url, {
       method,
       headers: {
         "Content-Type": "application/json",
-        apikey: SUPABASE_ANON_KEY,
+        apikey: env.supabaseAnonKey,
       },
       body: body ? JSON.stringify(body) : undefined,
     });
