@@ -3,15 +3,7 @@ import { jsonResponse, corsResponse } from "../_shared/security-headers.ts";
 import { rateLimitError, internalError, methodNotAllowed } from "../_shared/error-response.ts";
 import { checkRateLimit, recordRateLimit, hashString } from "../_shared/rate-limiter.ts";
 import { logInfo, logWarn, logError, generateRequestId } from "../_shared/structured-logger.ts";
-
-const TESTNET_CHARSET = "0123456789abcdefghijklmnopqrstuvwxyz";
-
-function generateMockTestnetAddress(): string {
-  const body = new Uint8Array(38);
-  crypto.getRandomValues(body);
-  const encoded = Array.from(body, (b) => TESTNET_CHARSET[b % TESTNET_CHARSET.length]).join("");
-  return `tb1q${encoded.slice(0, 38)}`;
-}
+import { generateMockTestnetAddress } from "../_shared/infra/address-generator.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return corsResponse();

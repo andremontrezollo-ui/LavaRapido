@@ -1,5 +1,16 @@
 # ShadowMix Backend Architecture
 
+> ⚠️ **ESTE DIRETÓRIO NÃO É O BACKEND EM EXECUÇÃO**
+>
+> This directory represents **target architecture / conceptual reference** only.
+> It is a domain library with portable abstractions and is **not** compiled, deployed,
+> or called by the frontend at runtime.
+>
+> **The active HTTP runtime is exclusively `supabase/functions/` (Deno Edge Functions).**
+> See the [project README](../README.md) for the official architecture overview.
+
+---
+
 Privacy-focused backend modules following Clean Architecture principles.
 
 ## Module Structure

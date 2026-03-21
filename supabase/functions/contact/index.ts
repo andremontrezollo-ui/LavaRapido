@@ -1,49 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { jsonResponse, corsResponse } from "../_shared/security-headers.ts";
-import { validationError, rateLimitError, internalError, methodNotAllowed, errorResponse, ErrorCodes } from "../_shared/error-response.ts";
+import { validationError, rateLimitError, internalError, methodNotAllowed } from "../_shared/error-response.ts";
 import { checkRateLimit, recordRateLimit, hashString } from "../_shared/rate-limiter.ts";
 import { logInfo, logWarn, logError, generateRequestId } from "../_shared/structured-logger.ts";
-
-const VALIDATION = {
-  subject: { min: 3, max: 100 },
-  message: { min: 10, max: 2000 },
-  replyContact: { max: 500 },
-};
-
-function sanitizeInput(input: string): string {
-  return input.trim().replace(/\0/g, "").replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "").replace(/\s{3,}/g, "  ");
-}
-
-function generateTicketId(): string {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  const array = new Uint8Array(6);
-  crypto.getRandomValues(array);
-  return "TKT-" + Array.from(array, (b) => chars[b % chars.length]).join("");
-}
-
-function validatePayload(body: unknown): { valid: true; data: { subject: string; message: string; replyContact: string } } | { valid: false; error: string } {
-  if (!body || typeof body !== "object") return { valid: false, error: "Invalid request body" };
-  const { subject, message, replyContact } = body as Record<string, unknown>;
-
-  if (typeof subject !== "string" || subject.trim().length < VALIDATION.subject.min || subject.trim().length > VALIDATION.subject.max) {
-    return { valid: false, error: `Subject must be ${VALIDATION.subject.min}-${VALIDATION.subject.max} characters` };
-  }
-  if (typeof message !== "string" || message.trim().length < VALIDATION.message.min || message.trim().length > VALIDATION.message.max) {
-    return { valid: false, error: `Message must be ${VALIDATION.message.min}-${VALIDATION.message.max} characters` };
-  }
-  if (replyContact !== undefined && replyContact !== "" && typeof replyContact === "string" && replyContact.length > VALIDATION.replyContact.max) {
-    return { valid: false, error: `Reply contact must be under ${VALIDATION.replyContact.max} characters` };
-  }
-
-  return {
-    valid: true,
-    data: {
-      subject: sanitizeInput(subject as string),
-      message: sanitizeInput(message as string),
-      replyContact: typeof replyContact === "string" ? sanitizeInput(replyContact) : "",
-    },
-  };
-}
+import { generateTicketId, validateContactPayload } from "../_shared/validation/contact.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return corsResponse();
@@ -76,7 +36,7 @@ Deno.serve(async (req) => {
       return validationError("Invalid JSON");
     }
 
-    const validation = validatePayload(body);
+    const validation = validateContactPayload(body);
     if (!validation.valid) {
       return validationError(validation.error);
     }
