@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle2, Copy, AlertTriangle } from "lucide-react";
 import { useClipboard } from "@/hooks/useClipboard";
 import { QRCodeSVG } from "qrcode.react";
-import type { MixSession } from "@/lib/mock-session";
+import type { MixSession } from "@/test/fixtures/mock-session";
 
 interface DepositInfoProps {
   session: MixSession;

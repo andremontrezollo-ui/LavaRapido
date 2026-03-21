@@ -5,12 +5,9 @@ import { Slider } from "@/components/ui/slider";
 import { Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isValidBitcoinAddress } from "@/lib/validation";
+import type { DestinationAddress } from "@/features/mixing/domain/index";
 
-export interface DestinationAddress {
-  id: string;
-  address: string;
-  percentage: number;
-}
+export type { DestinationAddress };
 
 interface DestinationListProps {
   destinations: DestinationAddress[];

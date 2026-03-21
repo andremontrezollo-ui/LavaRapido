@@ -1,115 +1,59 @@
 import { useState, useCallback, useMemo } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, Plus, Loader2 } from "lucide-react";
+import { AlertTriangle, Plus } from "lucide-react";
 import { ProgressSteps, type MixingStep } from "@/components/mixing/ProgressSteps";
-import { DestinationList, type DestinationAddress } from "@/components/mixing/DestinationList";
+import { DestinationList } from "@/components/mixing/DestinationList";
 import { DelayConfiguration } from "@/components/mixing/DelayConfiguration";
 import { ConfirmationSummary } from "@/components/mixing/ConfirmationSummary";
 import { DepositInfo } from "@/components/mixing/DepositInfo";
 import { SERVICE_CONFIG } from "@/lib/constants";
-import { isValidBitcoinAddress } from "@/lib/validation";
-import { createMixSession, type MixSessionResponse } from "@/lib/api";
-import type { MixSession } from "@/lib/mock-session";
+import {
+  initialState,
+  deriveValidation,
+  applyAddDestination,
+  applyRemoveDestination,
+  applyUpdateAddress,
+  applyUpdatePercentage,
+  applySessionResult,
+} from "@/features/mixing/application/index";
+import { submitMixSession } from "@/features/mixing/infrastructure/index";
 
 export default function MixingPage() {
-  const [step, setStep] = useState<MixingStep>("configure");
-  const [destinations, setDestinations] = useState<DestinationAddress[]>([
-    { id: "1", address: "", percentage: 100 },
-  ]);
-  const [delay, setDelay] = useState<number[]>([SERVICE_CONFIG.defaultDelay]);
-  const [session, setSession] = useState<MixSession | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [state, setState] = useState(initialState);
+
+  const { canProceed, total: totalPercentage } = useMemo(
+    () => deriveValidation(state),
+    [state]
+  );
 
   const addDestination = useCallback(() => {
-    if (destinations.length >= SERVICE_CONFIG.maxDestinations) return;
-    
-    const newPercentage = Math.floor(100 / (destinations.length + 1));
-    const updatedDestinations = destinations.map((d) => ({
-      ...d,
-      percentage: newPercentage,
-    }));
-    updatedDestinations.push({
-      id: Date.now().toString(),
-      address: "",
-      percentage: 100 - newPercentage * destinations.length,
-    });
-    setDestinations(updatedDestinations);
-  }, [destinations]);
+    setState((s) => applyAddDestination(s));
+  }, []);
 
   const removeDestination = useCallback((id: string) => {
-    if (destinations.length <= 1) return;
-    
-    const filtered = destinations.filter((d) => d.id !== id);
-    const perAddress = Math.floor(100 / filtered.length);
-    const remainder = 100 - perAddress * (filtered.length - 1);
-    setDestinations(
-      filtered.map((d, i) => ({
-        ...d,
-        percentage: i === filtered.length - 1 ? remainder : perAddress,
-      }))
-    );
-  }, [destinations]);
+    setState((s) => applyRemoveDestination(s, id));
+  }, []);
 
   const updateAddress = useCallback((id: string, address: string) => {
-    setDestinations((prev) =>
-      prev.map((d) => (d.id === id ? { ...d, address: address.trim() } : d))
-    );
+    setState((s) => applyUpdateAddress(s, id, address));
   }, []);
 
   const updatePercentage = useCallback((id: string, percentage: number) => {
-    setDestinations((prev) =>
-      prev.map((d) => (d.id === id ? { ...d, percentage } : d))
-    );
+    setState((s) => applyUpdatePercentage(s, id, percentage));
   }, []);
 
-  const allAddressesValid = useMemo(() => 
-    destinations.every((d) => d.address && isValidBitcoinAddress(d.address)),
-    [destinations]
-  );
-
-  const totalPercentage = useMemo(() => 
-    destinations.reduce((sum, d) => sum + d.percentage, 0),
-    [destinations]
-  );
-
-  const canProceed = allAddressesValid && totalPercentage === 100;
-
   const handleConfirm = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
-    const result = await createMixSession();
-
-    if (result.error) {
-      setError(result.status === 429 
-        ? "Too many requests. Please wait a few minutes." 
-        : result.error.message);
-      setLoading(false);
-      return;
-    }
-
-    if (result.data) {
-      setSession({
-        sessionId: result.data.sessionId,
-        depositAddress: result.data.depositAddress,
-        createdAt: new Date(result.data.createdAt),
-        expiresAt: new Date(result.data.expiresAt),
-        status: "pending_deposit",
-      });
-      setStep("deposit");
-    }
-    setLoading(false);
+    setState((s) => ({ ...s, loading: true, error: null }));
+    const result = await submitMixSession();
+    setState((s) => applySessionResult(s, result));
   }, []);
 
   const handleNewOperation = useCallback(() => {
-    setStep("configure");
-    setDestinations([{ id: "1", address: "", percentage: 100 }]);
-    setDelay([SERVICE_CONFIG.defaultDelay]);
-    setSession(null);
-    setError(null);
+    setState(initialState());
   }, []);
+
+  const { step, destinations, delay, session, loading, error } = state;
 
   return (
     <Layout>
@@ -130,7 +74,7 @@ export default function MixingPage() {
             </div>
 
             {/* Progress Steps */}
-            <ProgressSteps currentStep={step} />
+            <ProgressSteps currentStep={step as MixingStep} />
 
             {/* Step: Configure */}
             {step === "configure" && (
@@ -175,7 +119,12 @@ export default function MixingPage() {
                 </div>
 
                 {/* Delay Configuration */}
-                <DelayConfiguration delay={delay} onDelayChange={setDelay} />
+                <DelayConfiguration
+                  delay={[delay]}
+                  onDelayChange={(v) =>
+                    setState((s) => ({ ...s, delay: v[0] }))
+                  }
+                />
 
                 {/* Warning */}
                 <div className="p-4 rounded-xl bg-warning/5 border border-warning/20 flex items-start gap-3">
@@ -195,7 +144,7 @@ export default function MixingPage() {
                   variant="hero"
                   size="lg"
                   className="w-full"
-                  onClick={() => setStep("confirm")}
+                  onClick={() => setState((s) => ({ ...s, step: "confirm" }))}
                   disabled={!canProceed}
                 >
                   Review Configuration
@@ -212,7 +161,12 @@ export default function MixingPage() {
                     <div>
                       <p className="font-medium text-destructive mb-1">Error</p>
                       <p className="text-sm text-muted-foreground">{error}</p>
-                      <Button variant="outline" size="sm" className="mt-2" onClick={() => setError(null)}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-2"
+                        onClick={() => setState((s) => ({ ...s, error: null }))}
+                      >
                         Dismiss
                       </Button>
                     </div>
@@ -220,8 +174,10 @@ export default function MixingPage() {
                 )}
                 <ConfirmationSummary
                   destinations={destinations}
-                  delay={delay[0]}
-                  onBack={() => { setStep("configure"); setError(null); }}
+                  delay={delay}
+                  onBack={() =>
+                    setState((s) => ({ ...s, step: "configure", error: null }))
+                  }
                   onConfirm={handleConfirm}
                   loading={loading}
                 />
@@ -230,10 +186,7 @@ export default function MixingPage() {
 
             {/* Step: Deposit */}
             {step === "deposit" && session && (
-              <DepositInfo
-                session={session}
-                onNewOperation={handleNewOperation}
-              />
+              <DepositInfo session={session} onNewOperation={handleNewOperation} />
             )}
           </div>
         </div>
